@@ -1,0 +1,5 @@
+# Unit tests only need these (python -m unittest discover -s tests -t .).
+# Without torch/executorch, the two real-runtime tests are skipped automatically.
+numpy>=2.0
+pillow>=10.1
+pyyaml>=6.0

@@ -1,0 +1,31 @@
+# Zyqora AI application configuration. Everything is local; nothing is downloaded at runtime.
+# Relative paths are resolved against the project root.
+
+model:
+  pte: models/mobilenetv2_fp32_xnnpack.pte     # final artifact chosen in MODEL_COMPARISON.md
+  contract: config/model.json                  # input shape + preprocessing (Arm course model spec)
+  labels: null                                 # null = bundled src/zyqora/data/imagenet_labels.json
+  num_threads: null                            # null = ExecuTorch default; set from benchmark_pi.py thread sweep
+  require_backend: XnnpackBackend
+
+mapping: config/mapping.json
+voice: config/voice.yaml
+
+ecoguard:
+  threshold: 0.40          # minimum aggregated category probability to ACCEPT
+  min_margin: 0.0          # optional ambiguity rule (best - second category score); 0 disables it
+  require_top1_mapped: true
+  calibrated: false        # set true only after scripts/sweep_threshold.py on independent dev images
+  frozen: false            # set true before the final organiser run; recorded in summary.json
+  note: >-
+    0.40 is the provisional starting candidate, NOT a calibrated value. Choose the
+    operating point with scripts/sweep_threshold.py on development images that are
+    separate from the organiser test set, then freeze it before the final run.
+
+greenscore:
+  database: outputs/greenscore.sqlite3
+  points_verified_correct: 10     # proposed demo rule, not a hackathon requirement
+  points_verified_incorrect: 0
+
+outputs:
+  annotate_count: 2
