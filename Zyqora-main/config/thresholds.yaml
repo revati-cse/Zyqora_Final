@@ -1,5 +1,0 @@
-# Starting values only. Tune on a separate validation set.
-accept_confidence: 0.80
-review_below: 0.40
-retry_accept_confidence: 0.70
-retry_min_margin: 0.25

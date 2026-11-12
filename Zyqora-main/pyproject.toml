@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zyqora"
+version = "1.0.0"
+description = "Offline, confidence-aware waste sorting assistant (ExecuTorch + XNNPACK on Raspberry Pi 5)"
+requires-python = ">=3.10"
+dependencies = ["numpy>=2.0", "pillow>=10.1", "pyyaml>=6.0"]
+# executorch/torch are installed from requirements-pi.txt (pinned, platform specific).
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+zyqora = ["data/*.json"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]

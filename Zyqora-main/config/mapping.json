@@ -1,0 +1,443 @@
+{
+  "schema_version": 1,
+  "status": "EXAMPLE",
+  "note": "EXAMPLE ONLY. These categories are NOT the organiser's labels. Replace 'categories' with the exact organiser category names, review every class rule, then set status to ORGANISER. run_zyqora.py refuses final evaluation while status is EXAMPLE.",
+  "aggregation": "sum_softmax",
+  "aggregation_note": "Category score = sum of softmax probabilities of all ImageNet classes mapped to that category (absolute probability mass, not renormalised). Predicted category = highest category score.",
+  "categories": {
+    "Recyclable": {
+      "action": "RECYCLE",
+      "aliases": [
+        "recyclable",
+        "dry waste",
+        "dry"
+      ]
+    },
+    "Organic": {
+      "action": "COMPOST",
+      "aliases": [
+        "organic",
+        "wet waste",
+        "wet",
+        "biodegradable",
+        "food waste"
+      ]
+    },
+    "Residual": {
+      "action": "RESIDUAL",
+      "aliases": [
+        "residual",
+        "reject",
+        "non-recyclable"
+      ]
+    }
+  },
+  "classes": [
+    {
+      "index": 440,
+      "label": "beer bottle",
+      "category": "Recyclable",
+      "material": "glass",
+      "rule": "REC-01"
+    },
+    {
+      "index": 455,
+      "label": "bottlecap",
+      "category": "Recyclable",
+      "material": "metal",
+      "rule": "REC-02"
+    },
+    {
+      "index": 478,
+      "label": "carton",
+      "category": "Recyclable",
+      "material": "paperboard",
+      "rule": "REC-03"
+    },
+    {
+      "index": 549,
+      "label": "envelope",
+      "category": "Recyclable",
+      "material": "paper",
+      "rule": "REC-04"
+    },
+    {
+      "index": 653,
+      "label": "milk can",
+      "category": "Recyclable",
+      "material": "metal",
+      "rule": "REC-05"
+    },
+    {
+      "index": 720,
+      "label": "pill bottle",
+      "category": "Recyclable",
+      "material": "plastic",
+      "rule": "REC-06"
+    },
+    {
+      "index": 728,
+      "label": "plastic bag",
+      "category": "Recyclable",
+      "material": "plastic film",
+      "rule": "REC-07"
+    },
+    {
+      "index": 737,
+      "label": "pop bottle",
+      "category": "Recyclable",
+      "material": "plastic (PET)",
+      "rule": "REC-08"
+    },
+    {
+      "index": 898,
+      "label": "water bottle",
+      "category": "Recyclable",
+      "material": "plastic (PET)",
+      "rule": "REC-09"
+    },
+    {
+      "index": 899,
+      "label": "water jug",
+      "category": "Recyclable",
+      "material": "plastic",
+      "rule": "REC-10"
+    },
+    {
+      "index": 901,
+      "label": "whiskey jug",
+      "category": "Recyclable",
+      "material": "glass",
+      "rule": "REC-11"
+    },
+    {
+      "index": 907,
+      "label": "wine bottle",
+      "category": "Recyclable",
+      "material": "glass",
+      "rule": "REC-12"
+    },
+    {
+      "index": 917,
+      "label": "comic book",
+      "category": "Recyclable",
+      "material": "paper",
+      "rule": "REC-13"
+    },
+    {
+      "index": 921,
+      "label": "book jacket",
+      "category": "Recyclable",
+      "material": "paper",
+      "rule": "REC-14"
+    },
+    {
+      "index": 922,
+      "label": "menu",
+      "category": "Recyclable",
+      "material": "paper",
+      "rule": "REC-15"
+    },
+    {
+      "index": 924,
+      "label": "guacamole",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-01"
+    },
+    {
+      "index": 927,
+      "label": "trifle",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-02"
+    },
+    {
+      "index": 930,
+      "label": "French loaf",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-03"
+    },
+    {
+      "index": 931,
+      "label": "bagel",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-04"
+    },
+    {
+      "index": 932,
+      "label": "pretzel",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-05"
+    },
+    {
+      "index": 933,
+      "label": "cheeseburger",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-06"
+    },
+    {
+      "index": 934,
+      "label": "hotdog",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-07"
+    },
+    {
+      "index": 935,
+      "label": "mashed potato",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-08"
+    },
+    {
+      "index": 936,
+      "label": "head cabbage",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-09"
+    },
+    {
+      "index": 937,
+      "label": "broccoli",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-10"
+    },
+    {
+      "index": 938,
+      "label": "cauliflower",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-11"
+    },
+    {
+      "index": 939,
+      "label": "zucchini",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-12"
+    },
+    {
+      "index": 940,
+      "label": "spaghetti squash",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-13"
+    },
+    {
+      "index": 941,
+      "label": "acorn squash",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-14"
+    },
+    {
+      "index": 942,
+      "label": "butternut squash",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-15"
+    },
+    {
+      "index": 943,
+      "label": "cucumber",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-16"
+    },
+    {
+      "index": 944,
+      "label": "artichoke",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-17"
+    },
+    {
+      "index": 945,
+      "label": "bell pepper",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-18"
+    },
+    {
+      "index": 947,
+      "label": "mushroom",
+      "category": "Organic",
+      "material": "fungus",
+      "rule": "ORG-19"
+    },
+    {
+      "index": 948,
+      "label": "Granny Smith",
+      "category": "Organic",
+      "material": "fruit",
+      "rule": "ORG-20"
+    },
+    {
+      "index": 949,
+      "label": "strawberry",
+      "category": "Organic",
+      "material": "fruit",
+      "rule": "ORG-21"
+    },
+    {
+      "index": 950,
+      "label": "orange",
+      "category": "Organic",
+      "material": "fruit",
+      "rule": "ORG-22"
+    },
+    {
+      "index": 951,
+      "label": "lemon",
+      "category": "Organic",
+      "material": "fruit",
+      "rule": "ORG-23"
+    },
+    {
+      "index": 952,
+      "label": "fig",
+      "category": "Organic",
+      "material": "fruit",
+      "rule": "ORG-24"
+    },
+    {
+      "index": 953,
+      "label": "pineapple",
+      "category": "Organic",
+      "material": "fruit",
+      "rule": "ORG-25"
+    },
+    {
+      "index": 954,
+      "label": "banana",
+      "category": "Organic",
+      "material": "fruit",
+      "rule": "ORG-26"
+    },
+    {
+      "index": 955,
+      "label": "jackfruit",
+      "category": "Organic",
+      "material": "fruit",
+      "rule": "ORG-27"
+    },
+    {
+      "index": 956,
+      "label": "custard apple",
+      "category": "Organic",
+      "material": "fruit",
+      "rule": "ORG-28"
+    },
+    {
+      "index": 957,
+      "label": "pomegranate",
+      "category": "Organic",
+      "material": "fruit",
+      "rule": "ORG-29"
+    },
+    {
+      "index": 959,
+      "label": "carbonara",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-30"
+    },
+    {
+      "index": 961,
+      "label": "dough",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-31"
+    },
+    {
+      "index": 962,
+      "label": "meat loaf",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-32"
+    },
+    {
+      "index": 963,
+      "label": "pizza",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-33"
+    },
+    {
+      "index": 965,
+      "label": "burrito",
+      "category": "Organic",
+      "material": "food",
+      "rule": "ORG-34"
+    },
+    {
+      "index": 987,
+      "label": "corn",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-35"
+    },
+    {
+      "index": 988,
+      "label": "acorn",
+      "category": "Organic",
+      "material": "plant matter",
+      "rule": "ORG-36"
+    },
+    {
+      "index": 998,
+      "label": "ear",
+      "category": "Organic",
+      "material": "vegetable",
+      "rule": "ORG-37"
+    },
+    {
+      "index": 419,
+      "label": "Band Aid",
+      "category": "Residual",
+      "material": "mixed / soiled",
+      "rule": "RES-01"
+    },
+    {
+      "index": 529,
+      "label": "diaper",
+      "category": "Residual",
+      "material": "mixed / soiled",
+      "rule": "RES-02"
+    },
+    {
+      "index": 626,
+      "label": "lighter",
+      "category": "Residual",
+      "material": "mixed",
+      "rule": "RES-03"
+    },
+    {
+      "index": 692,
+      "label": "packet",
+      "category": "Residual",
+      "material": "multilayer packaging",
+      "rule": "RES-04"
+    },
+    {
+      "index": 700,
+      "label": "paper towel",
+      "category": "Residual",
+      "material": "soiled paper",
+      "rule": "RES-05"
+    },
+    {
+      "index": 999,
+      "label": "toilet tissue",
+      "category": "Residual",
+      "material": "soiled paper",
+      "rule": "RES-06"
+    }
+  ]
+}

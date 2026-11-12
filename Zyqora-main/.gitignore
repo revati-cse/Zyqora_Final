@@ -1,13 +1,29 @@
+# Python
 .venv/
+venv/
 __pycache__/
-.pytest_cache/
 *.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
 .env
+
+# Generated model artifacts (re-create with scripts/prepare_model.py + export_*.py, or copy to the Pi)
 models/*
+!models/README.md
 !models/.gitkeep
-data/*
-!data/sample/.gitkeep
-results/*
-!results/.gitkeep
+
+# Data: organiser/dev images are not committed; only READMEs and label templates
+data/**/*.jpg
+data/**/*.jpeg
+data/**/*.png
+data/**/*.bmp
+data/**/*.webp
+
+# Generated outputs, benchmarks, local databases
+outputs/*
+!outputs/.gitkeep
 *.db
+*.sqlite3
+*.sqlite3-*
 .DS_Store
