@@ -1,0 +1,11 @@
+torch
+torchvision
+numpy
+Pillow
+PyYAML
+psutil
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+pytest
