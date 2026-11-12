@@ -5,7 +5,7 @@ Last updated: 2026-11-12. Development host: x86_64 Linux cloud container (4 vCPU
 ## Inputs that were missing
 | Input | Effect |
 |---|---|
-| **`PLAN.md` was not in the repository.** | The verified facts restated in the implementation brief were used instead (versions, model contract, course commit `1045d51`, ShuffleNet/CLIP figures, 0.40 threshold candidate, demo outline). The Arm course source at `1045d51` was read directly to confirm the workflow and pins. Add `PLAN.md` to the repo and re-check anything it says that differs. |
+| **The original `PLAN.md` was not in the repository.** | The verified facts restated in the implementation brief were used instead (versions, model contract, course commit `1045d51`, ShuffleNet/CLIP figures, 0.40 threshold candidate, demo outline). The Arm course source at `1045d51` was read directly to confirm the workflow and pins. [PLAN.md](PLAN.md) is a **reconstruction** from those facts, tagged by what was verified. If the original exists, replace it and re-check anything that differs. |
 | **Organiser images, labels and category names** | `config/mapping.json` is an EXAMPLE (`Recyclable`/`Organic`/`Residual`). The final evaluation is blocked by design until `status` is `ORGANISER`. |
 | **Independent labelled dev images of waste** | The threshold of 0.40 is provisional (`calibrated: false`, `frozen: false`). `sweep_threshold.py` is implemented and tested but not yet run on real dev data. |
 | **Raspberry Pi 5 hardware facts** (RAM, cooling, storage, audio, camera) | Not confirmed. Run `scripts/pi_collect_facts.sh`. |
