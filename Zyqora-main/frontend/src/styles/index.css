@@ -1,0 +1,124 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource/noto-sans-tamil/400.css";
+@import "@fontsource/noto-sans-tamil/600.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Zyqora palette (light / dark). Status colours are muted on purpose. */
+:root {
+  --bg: #f8f9f6;
+  --surface: #ffffff;
+  --surface-2: #f1f3ef;
+  --primary: #244b37;
+  --primary-fg: #f8f9f6;
+  --fg: #17221b;
+  --muted-fg: #68736b;
+  --border: #e2e8e1;
+  --accept: #2f6b48;
+  --accept-bg: #e7f0e9;
+  --review: #8a5a12;
+  --review-bg: #f6eddc;
+  --danger: #9b2c2c;
+  --danger-bg: #f8e6e4;
+  --info-bg: #eaf0ec;
+  --chart-1: #244b37;
+  --chart-2: #7a9a63;
+  --chart-3: #b08a3e;
+  --chart-4: #8a9a91;
+  --ring: #244b37;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #101411;
+  --surface: #19201b;
+  --surface-2: #202923;
+  --primary: #9cc7a5;
+  --primary-fg: #101411;
+  --fg: #f1f5f0;
+  --muted-fg: #a4b1a7;
+  --border: #303a32;
+  --accept: #9cc7a5;
+  --accept-bg: #1f2e24;
+  --review: #e0b56a;
+  --review-bg: #33291a;
+  --danger: #e59a92;
+  --danger-bg: #3a2220;
+  --info-bg: #1f2a23;
+  --chart-1: #9cc7a5;
+  --chart-2: #6f9a7a;
+  --chart-3: #d2ad62;
+  --chart-4: #7f8c83;
+  --ring: #9cc7a5;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-fg);
+  --color-foreground: var(--fg);
+  --color-muted-foreground: var(--muted-fg);
+  --color-border: var(--border);
+  --color-accept: var(--accept);
+  --color-accept-bg: var(--accept-bg);
+  --color-review: var(--review);
+  --color-review-bg: var(--review-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-info-bg: var(--info-bg);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --font-sans: "Geist Variable", "Noto Sans Tamil", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  :lang(ta),
+  .font-tamil {
+    font-family: "Noto Sans Tamil", var(--font-sans);
+    line-height: 1.6;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
