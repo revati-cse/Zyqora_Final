@@ -3,131 +3,95 @@
 **Offline, confidence-aware waste sorting assistant with bilingual guidance and verified sorting rewards.**
 NAMMA AI hackathon, PS3 (AI for Sustainability: Edge-Based Waste Sorting). Target: Raspberry Pi 5, ExecuTorch, XNNPACK, fully offline.
 
-> **Status, in short:** the software pipeline is implemented and tested on an x86_64 Linux development host.
-> **It has not yet run on a Raspberry Pi 5, and the organiser images and labels have not arrived.** The shipped
-> `config/mapping.json` is an **EXAMPLE**, not the organiser's categories. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+> **Status in short** (details in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)):
+> - The team's fine-tuned **Organic / Recyclable MobileNetV2** is integrated as the `waste_mobilenetv2` profile. It was tested end-to-end with a stand-in model of the same architecture.
+> - The production switch to the waste model happens on the Pi via `scripts/verify_waste_model.py --activate`.
+> - Pi benchmarks, TEST-set evaluation, parity with the real checkpoint, and all physical hardware tests are **pending**. No such numbers are claimed here.
+> - The waste model **cannot recognise Residual waste** (see [MODEL_EVALUATION.md](MODEL_EVALUATION.md)).
 
 ## What it does
 
 ```
-image ─► preprocess (Pillow+NumPy, bit-identical to TorchVision) ─► MobileNetV2 .pte on ExecuTorch/XNNPACK
-      ─► softmax ─► MaterialWise (ImageNet classes → organiser category → bin)
-      ─► EcoGuard (ACCEPT / REVIEW + reason) ─► VoiceSort (Tamil/English clip)
-      ─► GreenScore (PENDING event → supervisor verification → points)
-      ─► results.csv · summary.json · annotated images
+camera / image file
+  └─► preprocess (Pillow + NumPy, bit-identical to TorchVision)
+        └─► MobileNetV2 .pte on ExecuTorch + XNNPACK (loaded once, offline)
+              └─► decoder for THIS model (2-class waste  |  1000-class ImageNet + MaterialWise)
+                    └─► EcoGuard: ACCEPT (bin) or REVIEW (supervisor, no bin opened)
+                          ├─► explanation card + VoiceSort (Tamil / English, offline clips)
+                          ├─► sorter (simulation by default; GPIO only when explicitly enabled)
+                          └─► GreenScore PENDING event ─► supervisor verification ─► points
 ```
 
-| Component | What it is | What it is not |
-|---|---|---|
-| **MaterialWise** (`src/zyqora/materialwise.py`) | Editable JSON rules mapping ImageNet class indices to organiser categories and bin actions. It sums the softmax probabilities of each category's classes, so the best *category* can differ from the best *single class*. | It does not train or run a second model. |
-| **EcoGuard** (`src/zyqora/ecoguard.py`) | It accepts a recommendation only when the category score is at least the threshold and the model's top-1 class is a known waste item. Otherwise it returns REVIEW with explicit reasons. | It does not guarantee reliability. The threshold of 0.40 is provisional until a sweep on dev data. |
-| **VoiceSort** (`src/zyqora/voicesort.py`) | Pre-generated Tamil and English WAV clips played with `aplay`. If playback fails it prints the text and keeps going. | It does not use online TTS. The Tamil wording has not yet been reviewed by a native speaker. |
-| **GreenScore** (`src/zyqora/greenscore.py`) | SQLite records. Points are awarded only after a supervisor confirms the item went in the correct bin. Each event can be verified once (atomic), and all queries are parameterised. | It does not reward AI predictions, and has no leaderboard, login or cloud sync. |
-
-The contribution is the *integration* (verify-to-earn, uncertainty-aware, offline, bilingual) on a Pi. None of the individual techniques is claimed to be new.
-
-### Three separate outputs per image
-Every image always gets:
-1. a **raw ImageNet prediction** (`raw_top1_class`),
-2. an **explicit organiser-category prediction** (`predicted_category`), and
-3. a **disposal action** (`disposal_action`), which is the bin only if EcoGuard accepts and `MANUAL_REVIEW` otherwise.
-
-REVIEW items keep their predicted category and **stay in the accuracy denominator**. Images that fail to load are listed as failed and counted as incorrect.
-
-## Model
-
-| | |
+| Component | Implemented as |
 |---|---|
-| Model | TorchVision `mobilenet_v2`, weights `MobileNet_V2_Weights.IMAGENET1K_V1` (hash-checked `mobilenet_v2-b0353104.pth`) |
-| Contract | input `[1,3,224,224]` float32 NCHW; Resize 256, CenterCrop 224, ImageNet mean/std; output 1000 logits |
-| Export | `torch.export` → `to_edge_transform_and_lower(XnnpackPartitioner)` → `to_executorch()` → `.pte` (Arm course Module 2 workflow, commit `1045d51`) |
-| Runtime | `executorch.extension.pybindings.portable_lib._load_for_executorch(pte).forward((x,))[0]`, ExecuTorch 1.3.1 |
-| Default artifact | `models/mobilenetv2_fp32_xnnpack.pte`, 13.99 MB, whole graph in one XNNPACK delegate |
+| **Model profiles** (`config/models.yaml`, `src/zyqora/profiles.py`) | Each `.pte` is bound to its own preprocessing contract and decoder. A model whose output shape doesn't match its profile is refused at load, so the 2-class decoder can never run on the ImageNet model (or vice versa). There is an optional SHA-256 pin, and fallback to the ImageNet baseline is explicit and logged. |
+| **Waste decoder** (`src/zyqora/decoders.py`) | logits `[1, 2]` → softmax once → index 0 Organic → COMPOST, index 1 Recyclable → RECYCLE |
+| **MaterialWise** (`src/zyqora/materialwise.py`) | ImageNet baseline only: editable rules from ImageNet classes to categories |
+| **EcoGuard** (`src/zyqora/ecoguard.py`) | ACCEPT only if the category probability ≥ threshold (waste model: 0.95 provisional); otherwise REVIEW with a reason. REVIEW items keep their predicted category for evaluation but are **never sorted**. |
+| **Explainability** (`src/zyqora/explain.py`) | Per-item card: class probability bars, the threshold, the EcoGuard decision in plain words, timings |
+| **VoiceSort** (`src/zyqora/voicesort.py`) | Pre-generated Tamil and English WAV clips via `aplay`. If playback fails, the text is printed and the station keeps going. |
+| **GreenScore** (`src/zyqora/greenscore.py`) | SQLite. Points are awarded only after a supervisor verifies the real bin; each event once (atomic); parameterised SQL. |
+| **Camera** (`src/zyqora/camera.py`) | Picamera2 / `rpicam-still` / folder simulation; single shot per key press |
+| **Sorter** (`src/zyqora/sorter.py`) | Simulation (default) or gpiozero pulses, which need config **and** `--enable-actuator` |
+| **Evaluation** (`src/zyqora/evaluator.py`) | Accuracy, per-class precision/recall/F1, confusion matrix, accepted-only metrics, review rate, unsupported ground truth |
 
-INT8 variants were built and compared. FP32 is the default for now; see [MODEL_COMPARISON.md](MODEL_COMPARISON.md).
+The contribution is the integration: offline edge inference + confidence-aware review + bilingual guidance + verify-to-earn rewards on a Pi. None of the individual techniques is claimed to be new.
 
-## Repository layout
+## Models
+| Profile | Model | Contract | Status |
+|---|---|---|---|
+| `waste_mobilenetv2` | MobileNetV2 fine-tuned on Organic vs Recyclable, FP32 `.pte` (about 8.47 MiB) | exact 224×224 resize, ImageNet mean/std → `[1, 2]` | Integrated. Validation accuracy 96.65% (team-reported). TEST pending. |
+| `imagenet_mobilenetv2` | TorchVision MobileNetV2 IMAGENET1K_V1, FP32 `.pte` (13.99 MB) | resize 256 → crop 224 → `[1, 1000]` | Baseline / fallback (current `active` until the waste gate passes) |
 
-```
-run_zyqora.py              main CLI (classification + evaluation + voice + GreenScore events)
-config/app.yaml            model path, EcoGuard threshold, GreenScore points
-config/mapping.json        MaterialWise rules (status EXAMPLE until organiser categories are entered)
-config/model.json          model input contract (from the Arm course model_spec.json)
-config/voice.yaml          English/Tamil instruction text
-src/zyqora/                preprocessing, model_runtime, materialwise, ecoguard, pipeline, evaluator,
-                           outputs, benchmark, voicesort, greenscore, config, imagenet_labels (+ bundled labels)
-scripts/                   prepare_model, export_fp32, export_int8, check_parity, check_config,
-                           sweep_threshold, benchmark_pi, generate_audio, check_offline, pi_collect_facts.sh
-tests/                     68 unit tests (unittest)
-audio/{en,ta}/*.wav        placeholder clips generated offline with espeak-ng
-data/{dev,organiser}/      put images + labels.csv here (not committed)
-models/                    generated .pte artifacts (not committed; see models/README.md)
-outputs/                   generated results (not committed)
-```
+Model details and the evaluation plan: [MODEL_EVALUATION.md](MODEL_EVALUATION.md). INT8 experiments with the ImageNet model: [MODEL_COMPARISON.md](MODEL_COMPARISON.md).
 
-## Setup
-
-**Development machine (model export).** Use Linux, macOS, or WSL2 on Windows, with Python 3.12:
-```bash
-python3.12 -m venv .venv-export && source .venv-export/bin/activate
-pip install -r requirements-export.txt
-python scripts/prepare_model.py        # downloads + hash-checks official weights (needs internet once)
-python scripts/export_fp32.py          # writes models/mobilenetv2_fp32_xnnpack.pte (+ .json metadata)
-python scripts/check_parity.py --images data/dev
-```
-
-**Raspberry Pi 5.** See [README_PI.md](README_PI.md).
-
-**Unit tests** (any Python ≥ 3.10; torch is not required):
+## Quick start
+Tests run anywhere (Python ≥ 3.10; torch not required):
 ```bash
 pip install -r requirements-dev.txt
+```
+```bash
 python -m unittest discover -s tests -t . -v
 ```
+Raspberry Pi deployment: [README_PI.md](README_PI.md). Configuration: [CONFIGURATION.md](CONFIGURATION.md). Camera, actuator and audio: [HARDWARE.md](HARDWARE.md). Demo: [DEMO.md](DEMO.md).
 
 ## Commands
-
 | Task | Command |
 |---|---|
-| Final organiser evaluation | `python run_zyqora.py --images data/organiser --labels data/organiser/labels.csv --out outputs/final` |
-| Development run (example mapping) | `python run_zyqora.py --images data/dev --labels data/dev/labels.csv --allow-example-mapping --out outputs/dev` |
-| Tamil voice | `python run_zyqora.py --images data/demo --voice ta --allow-example-mapping --out outputs/tamil_demo` |
-| No audio (default) | `python run_zyqora.py --images data/organiser --labels data/organiser/labels.csv --voice off` |
-| Record GreenScore events | add `--greenscore-user U01` to any run |
-| INT8 model | add `--model models/mobilenetv2_int8_xnnpack.pte` |
-| Thread count | add `--threads 2` (or set `model.num_threads` in `config/app.yaml`) |
-| Benchmark | `python scripts/benchmark_pi.py --model models/mobilenetv2_fp32_xnnpack.pte --threads 1 2 4 --images data/dev` |
-| Check configuration | `python scripts/check_config.py` (or `--mapping config/mapping.json`) |
-| FP32 parity gate | `python scripts/check_parity.py --images data/dev` |
-| INT8 vs FP32 report | `python scripts/check_parity.py --images data/dev --pte models/mobilenetv2_int8_xnnpack.pte --compare-pte models/mobilenetv2_fp32_xnnpack.pte` |
-| INT8 export | `python scripts/export_int8.py --calibration <calibration folder> --exclude data/organiser data/dev` |
-| Threshold sweep (dev only) | `python scripts/sweep_threshold.py --results outputs/dev/results.csv` |
-| Play an instruction | `PYTHONPATH=src python -m zyqora.voicesort --lang ta --say RECYCLE` |
-| Generate clips (offline) | `python scripts/generate_audio.py` (needs `espeak-ng`) |
-| GreenScore verify | `PYTHONPATH=src python -m zyqora.greenscore verify --event-id 3` (interactive) or `... --observed RECYCLE [--correct RECYCLE]` |
-| GreenScore points | `PYTHONPATH=src python -m zyqora.greenscore points --user-id U01` |
-| Offline readiness | `python scripts/check_offline.py` |
+| Verify + activate the waste model (Pi) | `python scripts/verify_waste_model.py --images <VAL sample with O/ R/> --expected-sha256 <hash> --activate` |
+| Station (simulation) | `python zyqora_station.py --camera folder:data/demo --voice ta --user DEMO01` |
+| Station (Pi camera) | `python zyqora_station.py --camera auto --voice en --user DEMO01` |
+| TEST evaluation | `python run_zyqora.py --profile waste_mobilenetv2 --images <TEST dir> --labels-from-folders --dataset-role test --quiet --out outputs/test_waste` |
+| Organiser evaluation | `python run_zyqora.py --images data/organiser --labels data/organiser/labels.csv --dataset-role organiser --out outputs/final` |
+| Leakage check | `python scripts/check_leakage.py --split train=<dir> --split val=<dir> --split test=<dir>` |
+| Parity (waste model) | `python scripts/check_parity.py --images <dir> --contract config/model_waste.json --checkpoint <.pth> --pte models/mobilenetv2_waste_fp32_xnnpack.pte` |
+| Re-export the waste model | `python scripts/export_fp32.py --checkpoint <.pth> --contract config/model_waste.json --out models/mobilenetv2_waste_fp32_xnnpack.pte` |
+| Benchmark | `python scripts/benchmark_pi.py --profile waste_mobilenetv2 --threads 1 2 3 4 --images <dir>` |
+| Threshold sweep (dev/val only) | `python scripts/sweep_threshold.py --results outputs/<dev run>/results.csv` |
+| Config / offline checks | `python scripts/check_config.py` · `python scripts/check_offline.py` |
+| Voice | `PYTHONPATH=src python -m zyqora.voicesort --lang ta --say RECYCLE` |
+| GreenScore | `PYTHONPATH=src python -m zyqora.greenscore verify --event-id 3` · `... points --user-id DEMO01` |
 
-After `pip install -e . --no-deps`, the `PYTHONPATH=src` prefix is not needed. `run_zyqora.py` exit codes: 0 ok, 2 config, 3 model/runtime, 4 data.
+`run_zyqora.py` exit codes: 0 ok, 2 config, 3 model/runtime, 4 data. `zyqora_station.py` also uses 5 for a camera error and 6 for an actuator error.
 
-## Output files
-
-`outputs/<run>/results.csv` has one row per image. The mandatory columns are `image_filename, ground_truth_category, raw_top1_class, raw_top1_probability, predicted_category, predicted_category_score, mapping_status, ecoguard_status, review_reason, disposal_action, inference_time_ms, correct`. Supporting columns follow: top-5, per-category scores, margin, mapped mass, rule id, material, preprocess and end-to-end time, and error.
-
-`outputs/<run>/summary.json` holds `total_images, total_correct, total_incorrect, overall_accuracy, accepted_count, review_count, review_rate, accepted_only_accuracy, model_name, model_precision, model_size_mb, inference_latency_{mean,median,p95}_ms, memory_usage_mb`. It also holds coverage, failed images, per-category accuracy, CPU seconds per image, runtime/backends/threads, the mapping and EcoGuard settings (including `calibrated`/`frozen`), the device model, and `evaluation_scope` (`FINAL_ORGANISER_TEST` / `DEVELOPMENT` / `INFERENCE_ONLY`).
-
-`outputs/<run>/annotated/*.jpg` contains at least two genuine samples. The run prefers one ACCEPT and one REVIEW, but never stages a missing case.
+## Outputs
+- `outputs/<run>/results.csv`: one row per image. Columns: `image_filename, ground_truth_category, raw_top1_class, raw_top1_probability, predicted_category, predicted_category_score, mapping_status, ecoguard_status, review_reason, disposal_action, inference_time_ms, correct`, plus supporting columns.
+- `outputs/<run>/summary.json`:
+  - accuracy, review rate, accepted-only accuracy, incorrect accepted
+  - `metrics` (confusion matrix, per-class P/R/F1) and `accepted_only_metrics`
+  - unsupported ground truth, latency, throughput, CPU per image, memory
+  - model profile, SHA-256 and fallback flag, EcoGuard settings, platform, `evaluation_scope`
+- `outputs/station/<run>/`: `events.jsonl`, `summary.json` (camera-to-result latency), `station.log`
 
 ## Metric definitions
-- **Overall accuracy** = correct organiser-category predictions / **all** evaluated images. REVIEW and failed images are included.
-- **Review rate** = REVIEW images / all images.
-- **Accepted-only accuracy** = correct ACCEPTed predictions / ACCEPTed predictions. It is reported as `null` ("undefined") when nothing was accepted.
-- A REVIEW decision is never counted as correct by itself. An image with no category prediction counts as incorrect.
-- Latency: model-only `forward()` time (`perf_counter_ns`) is reported separately from preprocessing and end-to-end time. One untimed warm-up runs first.
-- Memory: Linux `VmRSS` (current) and `VmHWM` (peak) of the whole Python process. This includes the interpreter and torch, so it is **not** model-only memory.
+- **Overall accuracy** = correct predictions / **all** evaluated images. REVIEW, failed, and unsupported-truth (e.g. Residual) images all stay in the denominator.
+- **Accepted-only accuracy** = correct ACCEPTed / ACCEPTed (reported as "undefined" if none were accepted). **Review rate** = REVIEW / all.
+- Precision, recall and F1 are per ground-truth class over all images. The confusion matrix has a `<none>` column for failed images.
+- Latency: model-only `forward()` time is reported separately from preprocessing and end-to-end time, after an untimed warm-up.
 
 ## Known limitations
-- MobileNetV2 knows **ImageNet** objects, not waste categories. Coverage depends on how well the organiser's images show ImageNet-recognisable objects (bottles, fruit, packets). Crumpled, dirty, or mixed waste will often be REVIEW or wrong.
-- The organiser categories, the mapping review, the threshold calibration, Pi latency and memory, offline verification on the Pi, audio playback, and the Tamil text review are all **pending** (see IMPLEMENTATION_STATUS.md).
-- INT8 reduced size and host latency but changed top-1 on 20–25% of 20 held-out general images, so it is not the default.
-- The ExecuTorch wheel depends on torch, so the Pi environment is not small (about 640 MB RSS for torch + runtime on the x86 host; the Pi figure has not been measured).
-- No object detection: one image is classified as one item.
+- **Residual / unknown items** are forced into Organic or Recyclable, often with high confidence. EcoGuard cannot catch this. MODEL_EVALUATION.md lists the fixes.
+- 0.95 is a validation-set operating point, not a guarantee. TEST results are pending.
+- No Pi measurements and no physical camera, actuator or speaker tests yet.
+- One item per image (no object detection).
+- The ExecuTorch wheel depends on torch, so the Pi environment is several hundred MB.

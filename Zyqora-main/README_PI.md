@@ -2,12 +2,91 @@
 
 > Status: these steps follow the Arm ExecuTorch course environment (Module 2, commit `1045d51`) and the wheels verified to exist for aarch64/Python 3.12. **Nobody has run them end-to-end on a Pi yet.** Record what actually happens in IMPLEMENTATION_STATUS.md.
 
+## 0. Existing Pi: deploy the waste-model integration (`feature/mobilenetv2-waste-integration`)
+Paths as on the team Pi: project `/home/pi/Zyqora_Final/Zyqora-main`, venv `/home/pi/Zyqora_Final/Zyqora-main/.venv`.
+
+**0.1 Git identity (once).** Use your own name and email:
+```bash
+git config --global user.name "Your Name"
+```
+```bash
+git config --global user.email "you@example.com"
+```
+
+**0.2 GitHub authentication without passwords.** GitHub no longer accepts account passwords over HTTPS. Use one of these, and never paste a token into chat or into a file in the repo.
+- SSH (recommended on the Pi):
+  ```bash
+  ssh-keygen -t ed25519 -C "zyqora-pi"
+  ```
+  ```bash
+  cat ~/.ssh/id_ed25519.pub
+  ```
+  Add the printed key under GitHub → Settings → SSH and GPG keys, then:
+  ```bash
+  cd /home/pi/Zyqora_Final && git remote set-url origin git@github.com:revati-cse/Zyqora_Final.git && ssh -T git@github.com
+  ```
+- or the GitHub CLI, which stores the credential in its own keyring:
+  ```bash
+  sudo apt install gh && gh auth login && gh auth setup-git
+  ```
+
+**0.3 Keep your local changes, get the branch.** Your uncommitted `config/app.yaml` edits and untracked validation data stay on the Pi. This branch does not modify `config/app.yaml`.
+```bash
+cd /home/pi/Zyqora_Final && git status
+```
+```bash
+git stash push -m "pi-local-before-waste-branch" -- Zyqora-main/config/app.yaml
+```
+```bash
+git fetch origin && git switch -c feature/mobilenetv2-waste-integration --track origin/feature/mobilenetv2-waste-integration
+```
+```bash
+git stash pop
+```
+If `stash pop` reports a conflict, keep your values. Untracked datasets and manifests are not touched by any of these commands, and must not be committed.
+
+**0.4 Check and activate the model.** `models/mobilenetv2_waste_fp32_xnnpack.pte` should already be on the Pi.
+```bash
+cd /home/pi/Zyqora_Final/Zyqora-main && source .venv/bin/activate
+```
+```bash
+python -m unittest discover -s tests -t . -v
+```
+```bash
+python scripts/check_config.py
+```
+```bash
+python scripts/verify_waste_model.py --images <a VALIDATION sample folder with O/ and R/ subfolders> --expected-sha256 <hash printed on the Mac>
+```
+When it prints `RESULT: PASSED`, run it again with `--activate`. That makes the waste model the production model and pins its hash.
+
+**0.5 Commit the deployment model.** About 8.47 MiB; `.gitignore` allows exactly this file and its sidecar `.json`.
+```bash
+git add Zyqora-main/models/mobilenetv2_waste_fp32_xnnpack.pte Zyqora-main/models/mobilenetv2_waste_fp32_xnnpack.json Zyqora-main/config/models.yaml
+```
+```bash
+git status
+```
+Make sure nothing else is staged: no datasets, `.venv`, `outputs/`, `*.sqlite3`, or `config/app.yaml`, unless you mean to commit that file. Then:
+```bash
+git commit -m "Add verified waste model artifact and activate waste_mobilenetv2"
+```
+```bash
+git push origin feature/mobilenetv2-waste-integration
+```
+
+**0.6 Run the station:**
+```bash
+python zyqora_station.py --camera auto --voice ta --user DEMO01
+```
+Without a camera, use `--camera folder:<image folder>`.
+
 ## 1. Hardware
 - Raspberry Pi 5 (any RAM size; 4 GB or more recommended because torch + ExecuTorch use several hundred MB of RAM)
 - Official 27 W USB-C PSU, microSD (32 GB+) or NVMe
 - Active Cooler recommended (check throttling with `vcgencmd get_throttled`)
 - Optional: speaker or headphones (3.5 mm via a USB/HAT adapter, HDMI audio, or a USB speaker) for VoiceSort
-- **No camera is required.** Zyqora classifies saved image files.
+- **No camera is required.** Zyqora classifies saved image files; the station has a folder simulation mode. With a Pi camera, see HARDWARE.md.
 
 Record the actual RAM, cooling, storage, audio and camera with `bash scripts/pi_collect_facts.sh`.
 
@@ -156,3 +235,9 @@ Offline checklist:
 | No sound | `aplay -l`; set the output device in `raspi-config`; check `audio/<lang>/*.wav` exist. |
 | `flatc` not found (export) | Call the venv's python, or activate the venv; the scripts add `venv/bin` to `PATH`. |
 | Slow or variable latency | Check `vcgencmd get_throttled` (cooling); close other programs; use Lite OS. |
+| `produces output (1, 2), but this model profile expects (1, 1000)` | A waste `.pte` was given to the ImageNet profile; use `--profile waste_mobilenetv2` (or the reverse). |
+| `SHA-256 ... does not match the pinned` | The `.pte` changed since `verify_waste_model.py --activate`; re-copy it from the Mac or re-verify. |
+| `FALLBACK MODEL IN USE` (station) | The active model failed to load (reason printed); fix it, or run with `--no-fallback` to stop instead. |
+| `CAMERA ERROR` | `rpicam-hello --list-cameras`; check the ribbon cable; for Picamera2 use a venv with `--system-site-packages`. See HARDWARE.md. |
+| `verify_waste_model.py` accuracy far below 50% | Class order reversed or wrong preprocessing; do not activate. Check the training transform and label order. |
+| `git push` asks for a password / 403 | Use SSH or `gh auth login` (section 0.2); never put tokens in the repo. |

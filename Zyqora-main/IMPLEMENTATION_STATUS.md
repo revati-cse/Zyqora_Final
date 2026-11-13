@@ -1,5 +1,52 @@
 # Implementation status
 
+## Phase 2: waste-model integration (branch `feature/mobilenetv2-waste-integration`, 2026-11-13)
+
+**Where this work ran:** an x86_64 Linux cloud container, not the Raspberry Pi and not the MacBook. `/home/pi/...` and `/Users/darius/...` were not reachable, so the team's `.pte`, checkpoints, TEST dataset and the Pi's uncommitted changes were **not available**. Everything that needs those files is listed under "Still to run" with exact commands. No metric below comes from those files.
+
+### Done and tested here
+| Area | Evidence |
+|---|---|
+| Model profiles (`config/models.yaml`, `profiles.py`) | unit tests: wrong `.pte` for a profile refused at load (both directions); SHA-256 pin; invalid configs rejected |
+| Waste decoder: 0 Organic → COMPOST, 1 Recyclable → RECYCLE, softmax once | unit tests incl. exact probabilities and "never reversed" |
+| Exact 224×224 preprocessing contract | bit-identical to `torchvision.transforms.Resize((224,224))` (max diff 0.0) |
+| EcoGuard 0.95 (provisional) | boundary tests (0.95 accepts, 0.9499 reviews); REVIEW never sorted |
+| Explicit fallback to the ImageNet profile with its own decoder | unit tests + CLI run (`--allow-fallback`; station default, `--no-fallback`) |
+| Evaluation: P/R/F1, confusion matrix, accepted-only metrics, folder labels (O/R), unsupported Residual ground truth, `--dataset-role test`, `--exclude-list` | unit tests + stand-in run |
+| Leakage check (SHA-256 exact + dHash near-duplicates) | unit test with planted exact and resized duplicates |
+| Camera (Picamera2 / rpicam-still / folder), sorter (simulation / GPIO), station UI, logging | unit tests with fakes; end-to-end station simulation with all network connections blocked |
+| Integration gate `verify_waste_model.py` | stand-in: passes and activates; swapped class folders fail at 20% and leave config unchanged |
+| Export / parity / benchmark tooling for the 2-class model | stand-in `.pte` (8.47 MiB): 1 XNNPACK delegate, parity 15/15, max abs logit diff 1.8e-5 |
+| Tests | **99 tests pass** with torch + ExecuTorch (export venv); with system Python 3.13 without torch, 97 pass and 2 skip |
+
+The stand-in is an untrained 2-class head on the ImageNet backbone. It is used **only** to exercise the code and was never committed. None of its accuracy figures describe your model.
+
+### Still to run, needs the Pi, the Mac or the datasets
+1. On the Pi: `scripts/verify_waste_model.py --images <VAL sample> --expected-sha256 <Mac hash>`, then `--activate` (README_PI §0.4).
+2. On the Mac: parity of the real checkpoint vs `.pte` (MODEL_EVALUATION.md). Also confirm the training transform was `Resize((224,224))`.
+3. `scripts/check_leakage.py` over TRAIN/VAL/TEST.
+4. TEST evaluation (full set, and without duplicates if any are found) on the Pi.
+5. `scripts/benchmark_pi.py --threads 1 2 3 4` and a station `--auto 30` latency run on the Pi; fill in BENCHMARK_REPORT.md.
+6. Commit `models/mobilenetv2_waste_fp32_xnnpack.pte` + `.json` from the Pi (README_PI §0.5).
+
+### Physical hardware tests still needed (none done)
+| Test | How |
+|---|---|
+| Pi camera capture (Picamera2 and rpicam-still) | HARDWARE.md, camera section; station `--camera auto` |
+| Camera unplugged / failing mid-run | unplug and capture: expect `CAMERA ERROR`, stop after 3 failures |
+| Speaker playback, Tamil and English | `python -m zyqora.voicesort --lang ta --say RECYCLE` |
+| GPIO actuator per bin, REVIEW keeps bins closed | HARDWARE.md checklist, then `--enable-actuator` |
+| Offline run with Wi-Fi off | README_PI §14 checklist |
+| Thermal stability over a long run | station `--auto 200`, `vcgencmd get_throttled` |
+
+### Known gaps
+- **Residual is not recognised** by the waste model; unknown items can be confidently forced into a class. Proposed fixes are in MODEL_EVALUATION.md.
+- The Pi's local `config/app.yaml` changes and untracked data were not visible from here. This branch does not modify `config/app.yaml`.
+- `.pte` artifacts can only be committed from a machine that has them (the Pi).
+
+---
+
+## Phase 1 (2026-11-12)
 Last updated: 2026-11-12. Development host: x86_64 Linux cloud container (4 vCPU Xeon, 16 GB RAM), Python 3.12.3 venv with torch 2.12.1, torchvision 0.27.1, executorch 1.3.1, torchao 0.17.0. **No Raspberry Pi was available.**
 
 ## Inputs that were missing
