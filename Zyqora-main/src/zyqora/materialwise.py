@@ -74,6 +74,10 @@ class WasteMapping:
             return name
         return self.aliases.get(name.strip().lower())
 
+    def ground_truth_category(self, name: str) -> Optional[str]:
+        """Ground-truth label -> canonical category (same as canonical_category for mappings)."""
+        return self.canonical_category(name)
+
 
 def validate_mapping_dict(data: object, labels: list[str]) -> list[str]:
     """Return a list of human-readable problems (empty list == valid)."""

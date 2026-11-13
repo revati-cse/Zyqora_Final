@@ -18,7 +18,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
 
-from .materialwise import WasteMapping
 from .preprocessing import SUPPORTED_EXTENSIONS
 from .schemas import ACCEPT, REVIEW, ImageResult
 
@@ -43,7 +42,7 @@ def discover_images(folder: str | Path) -> list[tuple[str, Path]]:
     return sorted(found)
 
 
-def read_labels_csv(path: str | Path, mapping: WasteMapping) -> dict[str, str]:
+def read_labels_csv(path: str | Path, mapping) -> dict[str, str]:
     """Read organiser labels -> {image_filename: canonical organiser category}."""
     p = Path(path)
     if not p.is_file():
@@ -67,7 +66,7 @@ def read_labels_csv(path: str | Path, mapping: WasteMapping) -> dict[str, str]:
                 continue
             if name in labels:
                 dupes.append(name)
-            canon = mapping.canonical_category(raw)
+            canon = mapping.ground_truth_category(raw)
             if canon is None:
                 unknown.setdefault(raw, []).append(name)
                 continue
@@ -80,11 +79,32 @@ def read_labels_csv(path: str | Path, mapping: WasteMapping) -> dict[str, str]:
             "unknown category names (not in config/mapping.json): "
             + ", ".join(f"'{k}' ({len(v)} images)" for k, v in unknown.items())
             + f". Known: {mapping.category_names}"
+            + (f" (+ unsupported ground truth {sorted(mapping.unsupported_ground_truth)})"
+               if getattr(mapping, "unsupported_ground_truth", None) else "")
         )
     if problems:
         raise LabelsError("; ".join(problems))
     if not labels:
         raise LabelsError(f"No labelled rows in {p}")
+    return labels
+
+
+def labels_from_folders(images: list[tuple[str, Path]], mapping) -> dict[str, str]:
+    """Ground truth from the first folder level, e.g. TEST/O/x.jpg -> 'O' -> alias -> Organic."""
+    labels: dict[str, str] = {}
+    unknown: dict[str, int] = {}
+    for rel, _ in images:
+        parts = rel.split("/")
+        if len(parts) < 2:
+            raise LabelsError(f"--labels-from-folders needs <class folder>/<image>; '{rel}' is not in a class folder")
+        canon = mapping.ground_truth_category(parts[0])
+        if canon is None:
+            unknown[parts[0]] = unknown.get(parts[0], 0) + 1
+        else:
+            labels[rel] = canon
+    if unknown:
+        raise LabelsError(f"folder names not recognised as categories or aliases: {unknown}. "
+                          f"Known: {mapping.category_names}")
     return labels
 
 
@@ -188,7 +208,8 @@ def latency_stats(values: list[float]) -> dict[str, Optional[float]]:
     }
 
 
-def summarize(rows: list[EvaluationRow], *, labelled: bool) -> dict:
+def summarize(rows: list[EvaluationRow], *, labelled: bool, predictable: Optional[list[str]] = None,
+              unsupported: Optional[Iterable[str]] = None) -> dict:
     total = len(rows)
     accepted = [r for r in rows if r.result.ecoguard_status == ACCEPT]
     reviewed = [r for r in rows if r.result.ecoguard_status == REVIEW]
@@ -221,6 +242,17 @@ def summarize(rows: list[EvaluationRow], *, labelled: bool) -> dict:
             "reviewed_but_category_correct": sum(1 for r in reviewed if r.correct),
             "per_category": _per_category(rows),
         })
+        unsupported = set(unsupported or [])
+        unsup_rows = [r for r in rows if r.ground_truth in unsupported]
+        s["unsupported_ground_truth_images"] = len(unsup_rows)
+        s["unsupported_ground_truth_note"] = (
+            f"{len(unsup_rows)} image(s) belong to categories the model cannot predict "
+            f"({sorted(unsupported)}); they are counted as incorrect in overall_accuracy." if unsup_rows else None)
+        accepted_unsup = [r for r in unsup_rows if r.result.ecoguard_status == ACCEPT]
+        s["unsupported_ground_truth_accepted_into_a_bin"] = len(accepted_unsup)
+        if predictable:
+            s["metrics"] = classification_metrics(rows, predictable)
+            s["accepted_only_metrics"] = classification_metrics(accepted, predictable)
     else:
         s.update({k: None for k in ("total_correct", "total_incorrect", "overall_accuracy", "accepted_only_accuracy")})
         s["accuracy_note"] = "No ground-truth labels supplied; accuracy not computed."
@@ -230,6 +262,40 @@ def summarize(rows: list[EvaluationRow], *, labelled: bool) -> dict:
     s["preprocess_latency"] = latency_stats(pre)
     s["end_to_end_latency"] = latency_stats(e2e)
     return s
+
+
+NO_PREDICTION = "<none>"
+
+
+def classification_metrics(rows: list[EvaluationRow], predictable: list[str]) -> dict:
+    """Confusion matrix + per-class precision / recall / F1 over ALL rows (REVIEW included).
+
+    Rows are ground-truth categories; columns are predicted categories plus '<none>'
+    (image failed or no category). Ground-truth categories the model cannot predict
+    (e.g. Residual for a 2-class model) appear as rows with recall 0 by construction.
+    """
+    truths = sorted({r.ground_truth for r in rows if r.ground_truth is not None})
+    cols = list(predictable) + [NO_PREDICTION]
+    matrix = {t: {c: 0 for c in cols} for t in sorted(set(truths) | set(predictable))}
+    for r in rows:
+        if r.ground_truth is None:
+            continue
+        pred = r.result.predicted_category or NO_PREDICTION
+        matrix[r.ground_truth][pred if pred in matrix[r.ground_truth] else NO_PREDICTION] += 1
+    per_class = {}
+    for c in matrix:
+        tp = matrix[c].get(c, 0)
+        support = sum(matrix[c].values())
+        predicted = sum(matrix[t].get(c, 0) for t in matrix)
+        precision = tp / predicted if predicted else None
+        recall = tp / support if support else None
+        f1 = (2 * precision * recall / (precision + recall)) if precision and recall else (0.0 if support and predicted else None)
+        per_class[c] = {"support": support, "predicted": predicted, "true_positive": tp, "precision": precision,
+                        "recall": recall, "f1": f1, "predictable": c in predictable}
+    scored = [v for v in per_class.values() if v["support"] and v["f1"] is not None]
+    macro = {k: (sum(v[k] or 0.0 for v in scored) / len(scored) if scored else None) for k in ("precision", "recall", "f1")}
+    return {"confusion_matrix": {"rows": "ground truth", "columns": "predicted", "matrix": matrix},
+            "per_class": per_class, "macro_avg_over_classes_with_support": macro}
 
 
 def _per_category(rows: list[EvaluationRow]) -> dict[str, dict]:
