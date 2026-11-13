@@ -1,5 +1,38 @@
 # Implementation status
 
+## Phase 3: Zyqora AI 3.0 dashboard (branch `feature/zyqora-ai-3-dashboard`, 2026-11-13)
+
+**Where this work ran:** the same x86_64 cloud container as Phase 2. The Raspberry Pi, the MacBook, the real `.pte`, the checkpoints and the TEST dataset were **not reachable**; no Remote Control folders were shared. GitHub still had **no committed waste `.pte`** (`models/` only contains `.gitkeep` and `README.md`).
+
+### Built and tested here
+| Area | Evidence |
+|---|---|
+| FastAPI backend (`src/zyqora/api/`, `serve_zyqora.py`) reusing the existing pipeline; model loaded once; inference lock + bounded queue; typed schemas; structured error codes; upload validation; CORS only for listed origins; SQLite history (WAL); thumbnails; telemetry from /proc; GreenScore, voice, camera and batch endpoints; serves the built SPA | 16 API tests (fake ExecuTorch binding via dependency injection) + live HTTP smoke tests with **real ExecuTorch** on the stand-in `.pte` |
+| React dashboard (`frontend/`): Overview, Live Classification, Batch, Analytics, GreenScore, Model Performance, Device, History, Settings; light/dark; English/Tamil; reduced motion; lazy 3D bin with SVG fallback | `npm run lint` clean, `npm run typecheck` clean, 11 Vitest UI tests, `npm run build` OK |
+| Browser end-to-end on the **real stack** (built SPA → FastAPI → ExecuTorch stand-in → EcoGuard) | Playwright/Chromium: upload → Classify Waste → `Recyclable · ACCEPT`; a low-confidence image → `REVIEW REQUIRED`, no bin; Tamil rendering; 0 console errors; **0 px horizontal overflow on all 9 pages at 375 px** and at desktop width; iPhone 13 emulation |
+| API latency on host | BENCHMARK_REPORT.md: model 3.7 ms, on-device 8.6 ms, HTTP round trip 31 ms median (stand-in, x86) |
+| Python suite | **115 tests** pass with torch + ExecuTorch + FastAPI. Without torch, 113 pass and 2 skip. |
+
+The UI tests and API tests mock the network or the ExecuTorch binding. They prove the UI and HTTP logic, **not** that the trained model predicts correctly. The only real-model evidence is still the team's own Pi run (`.pte` loads, output `[1, 2]`).
+
+### Not done (needs the Pi, the Mac or the datasets)
+1. Deploy on the Pi (README_PI §0 and §16), run `verify_waste_model.py` (then `--activate`), and open the dashboard from a laptop.
+2. Commit the real `models/mobilenetv2_waste_fp32_xnnpack.pte` (+ `.json`) from the Pi.
+3. Parity of the real checkpoint vs the `.pte` on the Mac, and confirmation that the training transform was `Resize((224,224))`.
+4. Leakage check and independent TEST evaluation. The Model Performance page shows "Not measured yet" until `outputs/test_waste/summary.json` exists.
+5. Pi benchmarks (`benchmark_pi.py`, API latency) and the dashboard hardware checklist in HARDWARE.md.
+6. Tamil text review by a fluent speaker.
+
+### Requirement gaps (honest list)
+- **Residual:** not a model class. REVIEW is a decision, not a third class; residual items can be confidently mis-sorted. Proposed fixes are in MODEL_EVALUATION.md.
+- **Browser camera** needs a secure context (https or localhost). Over plain http on the LAN, use the Pi camera button or file upload. No TLS setup is included.
+- **Continuous video classification** is not implemented (single-shot by design).
+- **Lenis smooth scrolling** was not added: a dashboard of short pages doesn't benefit from it. Motion is used only for the result card entrance. Three.js is lazy-loaded only on Overview.
+- shadcn/ui components were written into `src/components/ui` (shadcn style: Radix + CVA + tailwind-merge) instead of fetched with the shadcn CLI.
+- ESLint 9 is used for linting; npm reports it as out of support (dev-only tool).
+
+---
+
 ## Phase 2: waste-model integration (branch `feature/mobilenetv2-waste-integration`, 2026-11-13)
 
 **Where this work ran:** an x86_64 Linux cloud container, not the Raspberry Pi and not the MacBook. `/home/pi/...` and `/Users/darius/...` were not reachable, so the team's `.pte`, checkpoints, TEST dataset and the Pi's uncommitted changes were **not available**. Everything that needs those files is listed under "Still to run" with exact commands. No metric below comes from those files.

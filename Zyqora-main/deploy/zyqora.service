@@ -1,0 +1,24 @@
+# Optional: start Zyqora AI at boot on the Raspberry Pi.
+#   sudo cp deploy/zyqora.service /etc/systemd/system/zyqora.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now zyqora
+#   journalctl -u zyqora -f
+# Adjust User and paths if your setup differs.
+[Unit]
+Description=Zyqora AI dashboard and inference API (offline)
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Zyqora_Final/Zyqora-main
+Environment=PROFILE=waste_mobilenetv2
+Environment=PORT=8000
+ExecStart=/usr/bin/bash /home/pi/Zyqora_Final/Zyqora-main/scripts/start_pi_demo.sh
+Restart=on-failure
+RestartSec=5
+# Light hardening (the service only needs its project folder and the camera/GPIO devices).
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

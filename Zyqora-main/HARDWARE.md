@@ -49,3 +49,12 @@ aplay -l
 PYTHONPATH=src python -m zyqora.voicesort --lang ta --say RECYCLE
 ```
 Choose the output with `sudo raspi-config` → System → Audio. Playback failures never stop the station; the text is printed instead.
+
+## Dashboard hardware checks (Zyqora AI 3.0), none done yet
+- [ ] `bash scripts/start_pi_demo.sh` on the Pi; laptop opens `http://<pi-ip>:8000` and shows PI CONNECTED + MODEL READY.
+- [ ] Live Classification on a real organic and recyclable item photo: the result footer says Raspberry Pi 5 and shows ExecuTorch + XNNPACK.
+- [ ] **Capture with device camera** returns a classification (Pi camera via `/api/camera/capture`); unplugging the camera gives `CAMERA_UNAVAILABLE`, not a fake result.
+- [ ] Voice: "Play on the device speaker" plays through the Pi's audio output; "Play in this browser" plays on the laptop.
+- [ ] Device Monitoring shows the Pi's CPU temperature and RAM, and the CPU % rises briefly during a batch.
+- [ ] Batch of 50 images completes without `SERVER_BUSY`; record images/s on Analytics.
+- [ ] With `--enable-actuator` and the gpio backend (HARDWARE.md checks first): ACCEPT pulses the right pin, REVIEW pulses nothing.

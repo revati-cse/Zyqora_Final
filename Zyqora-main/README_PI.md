@@ -241,3 +241,58 @@ Offline checklist:
 | `CAMERA ERROR` | `rpicam-hello --list-cameras`; check the ribbon cable; for Picamera2 use a venv with `--system-site-packages`. See HARDWARE.md. |
 | `verify_waste_model.py` accuracy far below 50% | Class order reversed or wrong preprocessing; do not activate. Check the training transform and label order. |
 | `git push` asks for a password / 403 | Use SSH or `gh auth login` (section 0.2); never put tokens in the repo. |
+
+## 16. Zyqora AI 3.0 dashboard on the Pi
+**Python side.** `requirements-pi.txt` now includes FastAPI, Uvicorn and python-multipart:
+```bash
+cd /home/pi/Zyqora_Final/Zyqora-main && source .venv/bin/activate && pip install -r requirements-pi.txt
+```
+
+**Frontend build.** Do this once, with internet. Option A, build on the Pi (Raspberry Pi OS Trixie packages Node.js; Vite 7 needs Node ≥ 20.19):
+```bash
+sudo apt install -y nodejs npm && node --version
+```
+```bash
+cd frontend && npm ci && npm run build && cd ..
+```
+Option B, build on the laptop and copy the static files (no Node needed on the Pi):
+```bash
+cd frontend && npm ci && npm run build
+```
+```bash
+scp -r frontend/dist pi@<pi-ip>:/home/pi/Zyqora_Final/Zyqora-main/frontend/
+```
+
+**Start** (serves the dashboard and API on the LAN, offline):
+```bash
+bash scripts/start_pi_demo.sh
+```
+Open the printed `http://<pi-ip>:8000` on a laptop or phone in the same network. Do not expose this port to the internet: there is no login.
+
+**Start at boot** (optional):
+```bash
+sudo cp deploy/zyqora.service /etc/systemd/system/zyqora.service && sudo systemctl daemon-reload && sudo systemctl enable --now zyqora
+```
+```bash
+journalctl -u zyqora -f
+```
+
+**Check that it uses the trained model:**
+```bash
+curl -s http://127.0.0.1:8000/api/model/status | python3 -m json.tool
+```
+Expect `waste_mobilenetv2`, `[1, 2]`, Organic/Recyclable, and the Mac SHA-256.
+
+**Camera.** The **browser camera** only works on https or localhost, so from a laptop over plain http use **Capture with device camera** (the Pi camera through the API; HARDWARE.md) or upload images. Opening the dashboard in Chromium **on the Pi itself** (http://localhost:8000) allows the browser camera. The 3D illustration is switched off automatically there, to keep the Pi's CPU and GPU free for inference.
+
+**Offline demo network.** The laptop must reach the Pi. Use a travel router or phone hotspot with mobile data off, or an Ethernet cable plus a static address. Disabling the Pi's only network interface would disconnect the laptop too.
+
+**Dashboard troubleshooting**
+| Symptom | Fix |
+|---|---|
+| Page loads but shows `DEVICE DISCONNECTED` | The API isn't running or the address is wrong; check `systemctl status zyqora` and `curl http://<pi-ip>:8000/api/health`. Settings → API address should be empty when the page is served by the Pi. |
+| `MODEL UNAVAILABLE · MODEL_NOT_FOUND` | Copy the `.pte` to `models/`, then Settings → Reload model on device. |
+| `MODEL_CONTRACT_MISMATCH` | The file under the waste profile isn't the 2-class model (e.g. the ImageNet `.pte` was copied under the waste name). |
+| `API only` note at startup / blank page | `frontend/dist` is missing; build it (above). |
+| Laptop can't connect | Same network? Is a firewall enabled (`sudo ufw allow 8000/tcp`)? Did you start with `--host 0.0.0.0`? The start script does. |
+| Slow first request after boot | Importing torch + ExecuTorch takes several seconds; the `MODEL READY` pill turns green when loading is done. |

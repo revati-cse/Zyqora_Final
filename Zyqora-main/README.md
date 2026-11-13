@@ -4,10 +4,66 @@
 NAMMA AI hackathon, PS3 (AI for Sustainability: Edge-Based Waste Sorting). Target: Raspberry Pi 5, ExecuTorch, XNNPACK, fully offline.
 
 > **Status in short** (details in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)):
-> - The team's fine-tuned **Organic / Recyclable MobileNetV2** is integrated as the `waste_mobilenetv2` profile. It was tested end-to-end with a stand-in model of the same architecture.
-> - The production switch to the waste model happens on the Pi via `scripts/verify_waste_model.py --activate`.
-> - Pi benchmarks, TEST-set evaluation, parity with the real checkpoint, and all physical hardware tests are **pending**. No such numbers are claimed here.
+> - **Zyqora AI 3.0** adds a web dashboard (React) on a FastAPI backend that runs the real ExecuTorch pipeline. Open it from a laptop browser; the model runs on the Pi.
+> - The team's fine-tuned **Organic / Recyclable MobileNetV2** is integrated as the `waste_mobilenetv2` profile. The full stack (browser → API → ExecuTorch → EcoGuard → result) was tested end-to-end with a **stand-in model of the same architecture on an x86 host**, not with the real `.pte` and not on the Pi.
+> - Pi deployment, Pi benchmarks, TEST-set evaluation, parity with the real checkpoint, and all physical hardware tests are **pending**. No such numbers are claimed here.
 > - The waste model **cannot recognise Residual waste** (see [MODEL_EVALUATION.md](MODEL_EVALUATION.md)).
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Laptop["Laptop / phone browser"]
+    UI["React dashboard<br/>(frontend/dist, served by the Pi)"]
+  end
+  subgraph Pi["Raspberry Pi 5 (offline)"]
+    API["FastAPI · serve_zyqora.py<br/>model loaded once, inference lock"]
+    PRE["preprocess<br/>EXIF→RGB→224×224→normalise"]
+    ET["ExecuTorch + XNNPACK<br/>mobilenetv2_waste_fp32_xnnpack.pte"]
+    DEC["decoder<br/>softmax: 0 Organic, 1 Recyclable"]
+    EG["EcoGuard<br/>≥0.95 ACCEPT else REVIEW"]
+    OUT["sorter (sim) · voice · GreenScore<br/>SQLite history · telemetry"]
+    CAM["Pi camera (optional)"]
+  end
+  UI -- "HTTP on the LAN: image upload / JSON" --> API
+  CAM --> API
+  API --> PRE --> ET --> DEC --> EG --> OUT
+  OUT -- result --> UI
+```
+
+The laptop only displays the dashboard and uploads images; every prediction is computed by the API process on the device that serves the page. The API reuses the CLI's pipeline (`zyqora.profiles`, `zyqora.pipeline`), so the dashboard, `run_zyqora.py` and `zyqora_station.py` give identical results for the same image.
+
+## Run the dashboard
+
+**On the Raspberry Pi (judge demo).** Full steps in [README_PI.md](README_PI.md) §0 and §16.
+```bash
+cd /home/pi/Zyqora_Final/Zyqora-main && source .venv/bin/activate && pip install -r requirements-pi.txt
+```
+```bash
+(cd frontend && npm ci && npm run build)
+```
+```bash
+bash scripts/start_pi_demo.sh
+```
+Then open the printed `http://<pi-ip>:8000` in a browser on the same network. No Vite dev server is needed.
+
+**On a laptop (development).** You need Node.js ≥ 20.19 (tested with Node 22) and Python 3.12.
+- Frontend against the Pi:
+  ```bash
+  cd frontend && npm ci && ZYQORA_API_TARGET=http://<pi-ip>:8000 npm run dev
+  ```
+  Open http://localhost:5173. The dev server proxies `/api` to the Pi, so inference still happens on the Pi.
+- Local backend: Linux, or macOS with the ExecuTorch 1.3.1 wheels (`pip install -r requirements-export.txt fastapi uvicorn python-multipart`):
+  ```bash
+  python serve_zyqora.py --profile waste_mobilenetv2
+  ```
+  then `npm run dev` in `frontend/`. Native ExecuTorch wheels are not published for Windows. On Windows, use WSL2 for the backend, or point the dev server at the Pi.
+
+**Confirming the Pi runs the trained model (not the ImageNet one).** Check **Model Performance → Loaded model**, or:
+```bash
+curl -s http://<pi-ip>:8000/api/model/status
+```
+It must show `"profile": "waste_mobilenetv2"`, `"output_shape": [1, 2]`, `"classes": ["Organic", "Recyclable"]`, and a `sha256` equal to the hash printed on the Mac export. A wrong file under that profile is refused (`MODEL_CONTRACT_MISMATCH` / `MODEL_HASH_MISMATCH`), so the dashboard can't silently run the ImageNet model. API reference: [API.md](API.md). Demo script: [HACKATHON_DEMO.md](HACKATHON_DEMO.md).
 
 ## What it does
 
@@ -53,11 +109,16 @@ pip install -r requirements-dev.txt
 ```bash
 python -m unittest discover -s tests -t . -v
 ```
-Raspberry Pi deployment: [README_PI.md](README_PI.md). Configuration: [CONFIGURATION.md](CONFIGURATION.md). Camera, actuator and audio: [HARDWARE.md](HARDWARE.md). Demo: [DEMO.md](DEMO.md).
+Frontend checks (in `frontend/`):
+```bash
+npm run lint && npm run typecheck && npm test && npm run build
+```
+Raspberry Pi deployment: [README_PI.md](README_PI.md). Configuration: [CONFIGURATION.md](CONFIGURATION.md). Camera, actuator and audio: [HARDWARE.md](HARDWARE.md). API: [API.md](API.md). Demos: [HACKATHON_DEMO.md](HACKATHON_DEMO.md) (dashboard) and [DEMO.md](DEMO.md) (terminal station).
 
 ## Commands
 | Task | Command |
 |---|---|
+| Dashboard + API (Pi, LAN) | `bash scripts/start_pi_demo.sh` or `python serve_zyqora.py --host 0.0.0.0 --port 8000` |
 | Verify + activate the waste model (Pi) | `python scripts/verify_waste_model.py --images <VAL sample with O/ R/> --expected-sha256 <hash> --activate` |
 | Station (simulation) | `python zyqora_station.py --camera folder:data/demo --voice ta --user DEMO01` |
 | Station (Pi camera) | `python zyqora_station.py --camera auto --voice en --user DEMO01` |
@@ -82,6 +143,7 @@ Raspberry Pi deployment: [README_PI.md](README_PI.md). Configuration: [CONFIGURA
   - unsupported ground truth, latency, throughput, CPU per image, memory
   - model profile, SHA-256 and fallback flag, EcoGuard settings, platform, `evaluation_scope`
 - `outputs/station/<run>/`: `events.jsonl`, `summary.json` (camera-to-result latency), `station.log`
+- `outputs/web/`: dashboard history (`zyqora_web.sqlite3`), thumbnails, `server.log`
 
 ## Metric definitions
 - **Overall accuracy** = correct predictions / **all** evaluated images. REVIEW, failed, and unsupported-truth (e.g. Residual) images all stay in the denominator.
@@ -94,4 +156,5 @@ Raspberry Pi deployment: [README_PI.md](README_PI.md). Configuration: [CONFIGURA
 - 0.95 is a validation-set operating point, not a guarantee. TEST results are pending.
 - No Pi measurements and no physical camera, actuator or speaker tests yet.
 - One item per image (no object detection).
+- The dashboard has no login. Run it only on a trusted local network. The browser camera needs https or localhost; over plain http, use the Pi camera button or upload a file.
 - The ExecuTorch wheel depends on torch, so the Pi environment is several hundred MB.

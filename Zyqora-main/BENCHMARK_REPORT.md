@@ -45,6 +45,23 @@ Observations that should carry over to the Pi but must be re-measured there:
 - End-to-end time is dominated by JPEG decoding and resizing, not by the model. Capturing at 640×480 (the `config/hardware.yaml` default) instead of full resolution keeps that cost low.
 - About 640 MB of RSS comes from importing torch + ExecuTorch on this host (CUDA-enabled PyPI torch wheel). The Pi's CPU-only aarch64 wheel will differ.
 
+## Dashboard API latency (development host, NOT Pi)
+`serve_zyqora.py` with the stand-in 2-class `.pte` on the x86_64 VM, 198 KB JPEG, 50 sequential `POST /api/inference` from a local client after 5 warm-ups:
+
+| Stage | Median | p95 |
+|---|---:|---:|
+| Model inference (ExecuTorch `forward`) | 3.70 ms | 5.88 ms |
+| On-device total (decode + resize + inference + EcoGuard) | 8.6 ms | 11.7 ms |
+| HTTP round trip with thumbnail + SQLite history | 31.0 ms | 41.5 ms |
+| HTTP round trip with `--no-thumbnails` | 24.9 ms | 27.8 ms |
+| `GET /api/health` round trip (baseline) | 1.4 ms | n/a |
+
+Server process RSS was about 720 MB (dominated by importing torch + ExecuTorch; the CUDA-enabled PyPI torch wheel on x86). Warm start-up to MODEL READY took about 6 s. Re-measure on the Pi:
+```bash
+python serve_zyqora.py --profile waste_mobilenetv2
+```
+and in a second terminal, the same loop (any HTTP client), plus `GET /api/device/metrics` for RSS.
+
 ## Pi results
 | Profile | threads | median ms | p95 ms | CPU ms/inf | e2e median ms | peak MB | camera-to-result median ms |
 |---|---:|---:|---:|---:|---:|---:|---:|
