@@ -7,6 +7,7 @@ from pathlib import Path
 from PIL import Image
 
 from tests.helpers import LABELS, ensure_torch_like, logits_for, mapping, probs_with
+from zyqora.decoders import ImageNetMappingDecoder
 from zyqora.ecoguard import EcoGuardConfig
 from zyqora.evaluator import (
     RESULT_COLUMNS,
@@ -131,7 +132,7 @@ class EvaluationTests(unittest.TestCase):
             logits_for(probs_with(i898=0.3, i737=0.25)),  # bottle -> Recyclable 0.55 ACCEPT
             logits_for(probs_with(i282=0.9, i950=0.02)),  # cat -> Organic, top-1 unmapped -> REVIEW
         ])
-        pipe = ZyqoraPipeline(clf, LABELS, mapping(), EcoGuardConfig(threshold=0.4))
+        pipe = ZyqoraPipeline(clf, ImageNetMappingDecoder(LABELS, mapping()), EcoGuardConfig(threshold=0.4))
         truth = {"banana.png": "Organic", "bottle.jpg": "Recyclable", "broken.jpg": "Residual", "cat.jpg": "Residual"}
         rows = [EvaluationRow(pipe.process(p, n), truth[n]) for n, p in imgs]
         by = {r.result.image_filename: r for r in rows}
@@ -153,7 +154,7 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(len(data), 4)
         self.assertEqual(sum(d["correct"] == "True" for d in data), 2)
 
-        s = summarize(rows, labelled=True)
+        s = summarize(rows, labelled=True, predictable=mapping().category_names)
         write_json(s, out / "summary.json")
         loaded = json.loads((out / "summary.json").read_text())
         for key in ("total_images", "total_correct", "total_incorrect", "overall_accuracy", "accepted_count",

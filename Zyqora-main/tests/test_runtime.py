@@ -58,7 +58,11 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(module.calls, 0)
 
     def test_output_shape_validation(self):
-        clf, _, _ = self.make(FakeModule(np.zeros((1, 10), np.float32)))
+        # load time: the .pte metadata reports the wrong number of outputs
+        with self.assertRaises(ModelLoadError):
+            self.make(FakeModule(np.zeros((1, 10), np.float32)))
+        # run time: metadata claims (1, 1000) but forward() returns something else
+        clf, _, _ = self.make(FakeModule(np.zeros((1, 10), np.float32), output_shape=(1, 1000)))
         with self.assertRaises(InferenceError):
             clf.infer(X)
         nan = np.zeros((1, 1000), np.float32)

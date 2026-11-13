@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "status": "MODEL_CLASSES",
+  "note": "Classes the fine-tuned waste model was trained on, in output-index order. The model cannot predict any other category. Ground-truth labels listed under unsupported_ground_truth are accepted for evaluation but can never be predicted correctly.",
+  "classes": [
+    {"index": 0, "name": "Organic", "action": "COMPOST", "aliases": ["organic", "o", "wet", "wet waste", "biodegradable", "food waste"]},
+    {"index": 1, "name": "Recyclable", "action": "RECYCLE", "aliases": ["recyclable", "r", "dry", "dry waste"]}
+  ],
+  "unsupported_ground_truth": {
+    "Residual": {"aliases": ["residual", "reject", "non-recyclable", "landfill"]}
+  }
+}

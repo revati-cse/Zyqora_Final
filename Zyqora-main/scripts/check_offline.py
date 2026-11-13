@@ -19,6 +19,7 @@ from zyqora.config import load_app_config
 from zyqora.imagenet_labels import load_labels
 from zyqora.materialwise import load_mapping
 from zyqora.paths import AUDIO_DIR
+from zyqora.profiles import load_models_config
 from zyqora.voicesort import LANGUAGES, REQUIRED_SYSTEM_KEYS, clip_path
 
 
@@ -38,9 +39,16 @@ def main() -> int:
     app = load_app_config()
     labels = load_labels(app.labels)
     mapping = load_mapping(app.mapping, labels)
+    models = load_models_config(app)
+    active = models.get(models.active)
     checks = [
-        ("model artifact", app.pte.is_file(), str(app.pte)),
-        ("model contract", app.contract.is_file(), str(app.contract)),
+        (f"active model ({active.name})", active.pte.is_file(), str(active.pte)),
+        ("active model contract", active.contract.is_file(), str(active.contract)),
+    ]
+    if models.fallback and models.fallback != active.name:
+        fb = models.get(models.fallback)
+        checks.append((f"fallback model ({fb.name})", fb.pte.is_file(), str(fb.pte)))
+    checks += [
         ("ImageNet labels (local)", len(labels) == 1000, "bundled"),
         ("mapping", True, f"{app.mapping} (status {mapping.status})"),
     ]

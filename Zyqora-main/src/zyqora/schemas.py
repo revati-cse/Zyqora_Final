@@ -20,6 +20,7 @@ MANUAL_REVIEW = "MANUAL_REVIEW"
 TOP1_MAPPED = "TOP1_MAPPED"            # raw top-1 ImageNet class has a mapping rule
 TOP1_UNMAPPED = "TOP1_UNMAPPED"        # category predicted from other mapped classes
 UNSUPPORTED = "UNSUPPORTED"            # no mapped probability mass at all
+MODEL_CLASS = "MODEL_CLASS"            # model output index is itself a category (fine-tuned model)
 IMAGE_ERROR = "IMAGE_ERROR"            # image could not be loaded / preprocessed
 INFERENCE_ERROR = "INFERENCE_ERROR"    # model returned an invalid result
 

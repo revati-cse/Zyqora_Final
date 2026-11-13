@@ -11,6 +11,11 @@ Mode 2 (INT8 report): ExecuTorch FP32 .pte vs ExecuTorch INT8 .pte
         --pte models/mobilenetv2_int8_xnnpack.pte --compare-pte models/mobilenetv2_fp32_xnnpack.pte
     Reports top-1 disagreements; exact equivalence is NOT expected.
 
+Waste model (fine-tuned, 2 classes), FP32 gate against its training checkpoint:
+    python scripts/check_parity.py --images <labelled or unlabelled images> \
+        --contract config/model_waste.json --checkpoint /path/mobilenetv2_waste_fp32.pth \
+        --pte models/mobilenetv2_waste_fp32_xnnpack.pte
+
 Mode 1 needs torch + torchvision (export venv, or the Pi course venv).
 """
 
@@ -36,10 +41,13 @@ FP32_LOGIT_TOLERANCE = 1e-3  # documented tolerance for FP32 XNNPACK vs PyTorch 
 
 
 def torchvision_transform(spec: PreprocessSpec):
+    """The TorchVision transform the contract describes (reference for the NumPy implementation)."""
     import torchvision.transforms as T
 
-    return T.Compose([T.Resize(spec.resize), T.CenterCrop(spec.center_crop), T.ToTensor(),
-                      T.Normalize(mean=spec.mean, std=spec.std)])
+    steps = [T.Resize(list(spec.resize) if isinstance(spec.resize, tuple) else spec.resize)]
+    if spec.center_crop is not None:
+        steps.append(T.CenterCrop(spec.center_crop))
+    return T.Compose(steps + [T.ToTensor(), T.Normalize(mean=spec.mean, std=spec.std)])
 
 
 def main() -> int:
@@ -47,23 +55,28 @@ def main() -> int:
     ap.add_argument("--images", type=Path, required=True)
     ap.add_argument("--pte", type=Path, default=MODELS_DIR / "mobilenetv2_fp32_xnnpack.pte")
     ap.add_argument("--compare-pte", type=Path, default=None, help="second .pte (INT8 report mode)")
-    ap.add_argument("--weights", type=Path, default=MODELS_DIR / "mobilenet_v2.pth")
+    ap.add_argument("--weights", "--checkpoint", dest="weights", type=Path, default=MODELS_DIR / "mobilenet_v2.pth",
+                    help="PyTorch reference checkpoint (default: ImageNet weights)")
+    ap.add_argument("--contract", type=Path, default=DEFAULT_MODEL_CONTRACT, help="model contract JSON")
+    ap.add_argument("--trusted-pickle", action="store_true", help="allow a full pickled model (your own file only)")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--out", type=Path, default=OUTPUTS_DIR / "parity")
     args = ap.parse_args()
     _bootstrap.quiet_toolchain_logs()
 
-    labels = load_labels()
-    spec = PreprocessSpec.from_file(DEFAULT_MODEL_CONTRACT)
+    contract = json.loads(args.contract.read_text(encoding="utf-8"))
+    spec = PreprocessSpec.from_contract(contract)
+    num_classes = int(contract.get("output", {}).get("shape", [1, 1000])[-1])
+    labels = contract["output"]["classes"] if num_classes != 1000 else load_labels()
     images = discover_images(args.images)[: args.limit]
     if not images:
         print(f"No supported images in {args.images}", file=sys.stderr)
         return 2
 
-    candidate = ExecuTorchClassifier(args.pte, input_shape=spec.input_shape)
+    candidate = ExecuTorchClassifier(args.pte, input_shape=spec.input_shape, num_classes=num_classes)
     int8_mode = args.compare_pte is not None
     if int8_mode:
-        reference = ExecuTorchClassifier(args.compare_pte, input_shape=spec.input_shape)
+        reference = ExecuTorchClassifier(args.compare_pte, input_shape=spec.input_shape, num_classes=num_classes)
         ref_name = f"ExecuTorch:{args.compare_pte.name}"
         tv = None
     else:
@@ -71,9 +84,9 @@ def main() -> int:
 
         from export_common import build_reference_model
 
-        torch_model = build_reference_model(args.weights)
+        torch_model = build_reference_model(args.weights, num_classes, trusted_pickle=args.trusted_pickle)
         tv = torchvision_transform(spec)
-        ref_name = "PyTorch eager (TorchVision MobileNetV2 IMAGENET1K_V1)"
+        ref_name = f"PyTorch eager ({args.weights.name}, {num_classes} classes)"
 
     rows, preprocess_max_diff = [], 0.0
     for rel, path in images:
@@ -111,6 +124,10 @@ def main() -> int:
         "mode": "INT8_vs_FP32_report" if int8_mode else "FP32_gate",
         "reference": ref_name,
         "candidate": f"ExecuTorch:{args.pte.name}",
+        "contract": str(args.contract),
+        "classes": num_classes,
+        "max_abs_prob_diff": max(r["max_abs_prob_diff"] for r in rows),
+        "input": "identical preprocessed tensor fed to both models for every image",
         "images": len(rows),
         "top1_agreement": n_agree,
         "top1_agreement_rate": n_agree / len(rows),

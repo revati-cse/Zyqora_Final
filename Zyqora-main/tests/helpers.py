@@ -72,29 +72,38 @@ class FakeOutput:
         return self._arr
 
 
-class FakeMeta:
+class _Sizes:
     def __init__(self, shape):
+        self._shape = tuple(shape)
+
+    def sizes(self):
+        return self._shape
+
+
+class FakeMeta:
+    def __init__(self, shape, out_shape=None):
         self._shape = shape
+        self._out = out_shape
 
     def input_tensor_meta(self, i):
-        shape = self._shape
+        return _Sizes(self._shape)
 
-        class T:
-            def sizes(self):
-                return shape
-
-        return T()
+    def output_tensor_meta(self, i):
+        return _Sizes(self._out)
 
 
 class FakeModule:
-    def __init__(self, logits, input_shape=(1, 3, 224, 224), raise_on_forward=False):
+    """Fake ExecuTorch module. Output metadata defaults to the shape of the logits it returns."""
+
+    def __init__(self, logits, input_shape=(1, 3, 224, 224), raise_on_forward=False, output_shape=None):
         self.logits = logits
         self.input_shape = input_shape
+        self.output_shape = output_shape or tuple(np.asarray(logits).shape)
         self.raise_on_forward = raise_on_forward
         self.calls = 0
 
     def method_meta(self, name):
-        return FakeMeta(self.input_shape)
+        return FakeMeta(self.input_shape, self.output_shape)
 
     def forward(self, inputs):
         self.calls += 1
@@ -127,3 +136,25 @@ def fake_portable_lib(module, backends=("XnnpackBackend",), load_error=None):
 def write_fake_pte(path) -> None:
     """Bytes with the ExecuTorch flatbuffer identifier at offset 4 (content irrelevant for fakes)."""
     path.write_bytes(b"\x00\x00\x00\x00ET12" + b"\x00" * 128)
+
+
+WASTE_CLASSES_DICT = {
+    "schema_version": 1,
+    "status": "MODEL_CLASSES",
+    "classes": [
+        {"index": 0, "name": "Organic", "action": "COMPOST", "aliases": ["o", "wet"]},
+        {"index": 1, "name": "Recyclable", "action": "RECYCLE", "aliases": ["r", "dry"]},
+    ],
+    "unsupported_ground_truth": {"Residual": {"aliases": ["reject"]}},
+}
+
+
+def waste_classes():
+    from zyqora.classset import class_set_from_dict
+
+    return class_set_from_dict(WASTE_CLASSES_DICT, source="test")
+
+
+def two_logits(p_organic: float) -> np.ndarray:
+    """Logits whose softmax gives exactly [p_organic, 1 - p_organic]."""
+    return np.log(np.array([p_organic, 1.0 - p_organic], dtype=np.float64)).astype(np.float32)

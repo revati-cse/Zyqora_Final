@@ -14,6 +14,7 @@ Exit code 0 = valid (warnings allowed), 1 = errors.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import _bootstrap  # noqa: F401
@@ -65,6 +66,32 @@ def main() -> int:
                             "final evaluation is blocked until real categories are configured")
     except MappingError as exc:
         errors.append(str(exc))
+
+    try:
+        from zyqora.classset import load_class_set
+        from zyqora.profiles import load_models_config
+
+        models = load_models_config(app)
+        print(f"OK   models.yaml: active={models.active} fallback={models.fallback} profiles={sorted(models.profiles)}")
+        for prof in models.profiles.values():
+            contract = json.loads(prof.contract.read_text(encoding="utf-8"))
+            pspec = PreprocessSpec.from_contract(contract)
+            n_out = int(contract.get("output", {}).get("shape", [1, 1000])[-1])
+            if prof.decoder == "direct_classes":
+                cs = load_class_set(prof.classes, n_out)
+                extra = f"classes={list(cs.class_names)} actions={cs.categories} unsupported={sorted(cs.unsupported_ground_truth)}"
+                if mapping is not None:
+                    for a in cs.actions:
+                        if a not in mapping.actions:
+                            warnings.append(f"profile {prof.name}: action {a} not used by the ImageNet mapping")
+            else:
+                extra = f"mapping={prof.mapping.name}"
+            print(f"OK   profile {prof.name}: {prof.decoder}, output {n_out}, resize {pspec.resize}, "
+                  f"crop {pspec.center_crop}, EcoGuard {prof.ecoguard.threshold} (calibrated={prof.ecoguard.calibrated}), {extra}")
+            if not prof.pte.is_file():
+                warnings.append(f"profile {prof.name}: model artifact not present: {prof.pte}")
+    except (ConfigError, MappingError, OSError, KeyError, ValueError) as exc:
+        errors.append(f"models.yaml / profiles: {exc}")
 
     g = app.ecoguard
     print(f"OK   ecoguard threshold={g.threshold} min_margin={g.min_margin} "

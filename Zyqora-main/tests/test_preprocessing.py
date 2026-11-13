@@ -104,6 +104,32 @@ class PreprocessingTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_input_array(nan, (1, 3, 224, 224))
 
+    def test_exact_resize_contract_for_waste_model(self):
+        from zyqora.paths import CONFIG_DIR
+
+        spec = PreprocessSpec.from_file(CONFIG_DIR / "model_waste.json")
+        for size in ((640, 480), (100, 400), (224, 224)):
+            p = self._save(Image.new("RGB", size, (200, 100, 50)), f"w{size[0]}x{size[1]}.png")
+            x = preprocess_path(p, spec)
+            self.assertEqual(x.shape, (1, 3, 224, 224))
+            self.assertAlmostEqual(float(x[0, 0].mean()), (200 / 255 - 0.485) / 0.229, places=5)
+
+    def test_bad_contracts_rejected(self):
+        base = {"input": {"shape": [1, 3, 224, 224], "dtype": "float32", "layout": "nchw",
+                          "preprocessing": {"resize": [224, 224], "center_crop": None,
+                                            "mean": [0.485, 0.456, 0.406], "std": [0.229, 0.224, 0.225]}}}
+        PreprocessSpec.from_contract(base)
+        import copy
+
+        for mutate in (lambda c: c["input"]["preprocessing"].update(resize=[224, 200]),
+                       lambda c: c["input"]["preprocessing"].update(resize=[224]),
+                       lambda c: c["input"].update(dtype="uint8"),
+                       lambda c: c["input"]["preprocessing"].update(resize=256)):
+            c = copy.deepcopy(base)
+            mutate(c)
+            with self.assertRaises(ValueError):
+                PreprocessSpec.from_contract(c)
+
     def test_torchvision_equivalence_if_available(self):
         try:
             import torchvision.transforms as T
@@ -115,6 +141,12 @@ class PreprocessingTests(unittest.TestCase):
         tv = T.Compose([T.Resize(256), T.CenterCrop(224), T.ToTensor(), T.Normalize(self.spec.mean, self.spec.std)])
         ref = tv(Image.open(p).convert("RGB")).unsqueeze(0).numpy()
         self.assertEqual(float(np.max(np.abs(ref - preprocess_path(p, self.spec)))), 0.0)
+        from zyqora.paths import CONFIG_DIR
+
+        exact = PreprocessSpec.from_file(CONFIG_DIR / "model_waste.json")
+        tv2 = T.Compose([T.Resize((224, 224)), T.ToTensor(), T.Normalize(exact.mean, exact.std)])
+        ref2 = tv2(Image.open(p).convert("RGB")).unsqueeze(0).numpy()
+        self.assertEqual(float(np.max(np.abs(ref2 - preprocess_path(p, exact)))), 0.0)
 
 
 if __name__ == "__main__":

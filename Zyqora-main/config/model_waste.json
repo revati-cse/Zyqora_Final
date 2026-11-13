@@ -1,0 +1,27 @@
+{
+  "name": "mobilenetv2_waste",
+  "task": "image_classification",
+  "model_source": {
+    "architecture": "torchvision.models.mobilenet_v2, classifier.1 replaced by Linear(1280, 2)",
+    "initialisation": "ImageNet (MobileNet_V2_Weights.IMAGENET1K_V1), fine-tuned by the Zyqora team",
+    "training": "20,556 training / 2,000 validation images, MacBook Air M3 (PyTorch MPS), best checkpoint at fine-tuning epoch 4 (team-reported)",
+    "exported_with": "ExecuTorch 1.3.1, XNNPACK (team-reported)",
+    "artifact": "models/mobilenetv2_waste_fp32_xnnpack.pte"
+  },
+  "input": {
+    "shape": [1, 3, 224, 224],
+    "dtype": "float32",
+    "layout": "nchw",
+    "preprocessing": {
+      "resize": [224, 224],
+      "center_crop": null,
+      "mean": [0.485, 0.456, 0.406],
+      "std": [0.229, 0.224, 0.225]
+    }
+  },
+  "output": {
+    "shape": [1, 2],
+    "classes": ["Organic", "Recyclable"],
+    "meaning": "logits; index 0 = Organic, index 1 = Recyclable; softmax applied once in zyqora.decoders"
+  }
+}

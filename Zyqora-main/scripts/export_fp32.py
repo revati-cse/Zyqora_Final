@@ -9,6 +9,10 @@ Sequence (Arm course Module 2, lower_mobilenetv2_xnnpack.py):
 
 Writes models/mobilenetv2_fp32_xnnpack.pte and a .json metadata file, then
 loads the .pte through the ExecuTorch runtime as an integrity check.
+
+Fine-tuned waste model (reproducible re-export from the training checkpoint):
+    python scripts/export_fp32.py --checkpoint /path/mobilenetv2_waste_fp32.pth \
+        --contract config/model_waste.json --out models/mobilenetv2_waste_fp32_xnnpack.pte
 """
 
 from __future__ import annotations
@@ -21,6 +25,7 @@ import _bootstrap
 
 from export_common import (
     build_reference_model,
+    contract_num_classes,
     inspect_delegation,
     load_contract,
     sha256_file,
@@ -33,7 +38,10 @@ from zyqora.paths import MODELS_DIR
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--weights", type=Path, default=MODELS_DIR / "mobilenet_v2.pth")
+    ap.add_argument("--weights", "--checkpoint", dest="weights", type=Path, default=MODELS_DIR / "mobilenet_v2.pth",
+                    help="state_dict checkpoint (default: ImageNet weights from prepare_model.py)")
+    ap.add_argument("--contract", type=Path, default=None, help="model contract JSON (default: config/model.json)")
+    ap.add_argument("--trusted-pickle", action="store_true", help="allow a full pickled model (your own file only)")
     ap.add_argument("--out", type=Path, default=MODELS_DIR / "mobilenetv2_fp32_xnnpack.pte")
     args = ap.parse_args()
     _bootstrap.quiet_toolchain_logs()
@@ -43,8 +51,9 @@ def main() -> int:
     from executorch.backends.xnnpack.partition.xnnpack_partitioner import XnnpackPartitioner
     from executorch.exir import to_edge_transform_and_lower
 
-    contract = load_contract()
-    model = build_reference_model(args.weights)
+    contract = load_contract(args.contract) if args.contract else load_contract()
+    num_classes = contract_num_classes(contract)
+    model = build_reference_model(args.weights, num_classes, trusted_pickle=args.trusted_pickle)
     example = (torch.randn(*contract["input"]["shape"]),)
 
     print("torch.export ...")
@@ -62,7 +71,9 @@ def main() -> int:
 
     meta = {
         "model": contract["name"],
-        "weights_variant": contract["model_source"]["weights_variant"],
+        "weights_variant": contract["model_source"].get("weights_variant"),
+        "checkpoint": args.weights.name,
+        "num_classes": num_classes,
         "backend": "xnnpack",
         "precision": "fp32",
         "pte": args.out.name,

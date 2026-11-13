@@ -12,6 +12,10 @@ build/
 models/*
 !models/README.md
 !models/.gitkeep
+# Deployment model (8.47 MiB, under GitHub's 100 MB limit): committed so the Pi can deploy from git.
+# Its sidecar .json holds the SHA-256 written by scripts/verify_waste_model.py.
+!models/mobilenetv2_waste_fp32_xnnpack.pte
+!models/mobilenetv2_waste_fp32_xnnpack.json
 
 # Data: organiser/dev images are not committed; only READMEs and label templates
 data/**/*.jpg

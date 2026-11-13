@@ -1,12 +1,14 @@
 """Deterministic MobileNetV2 preprocessing using only Pillow and NumPy.
 
-This reproduces the TorchVision / Arm-course transform exactly:
-    Resize(256) -> CenterCrop(224) -> ToTensor() -> Normalize(ImageNet)
-so the Pi runtime does not need TorchVision. ``scripts/check_parity.py``
-verifies the equivalence numerically against TorchVision.
+Two resize modes reproduce the TorchVision transforms exactly, so the Pi runtime
+does not need TorchVision (``scripts/check_parity.py`` verifies this numerically):
 
-Steps: open -> EXIF orientation -> RGB -> resize short side (bilinear, PIL
-antialias) -> center crop -> float32 / 255 -> normalise -> NCHW batch of 1.
+* ImageNet model (config/model.json):  Resize(256) -> CenterCrop(224)
+* Waste model (config/model_waste.json): Resize((224, 224))   (exact, no crop)
+
+followed by ToTensor() (scale to [0, 1]) and Normalize(ImageNet mean/std).
+Steps: open -> EXIF orientation -> RGB -> resize (bilinear, PIL antialias)
+-> [center crop] -> float32 / 255 -> normalise -> NCHW batch of 1.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -27,28 +30,47 @@ class ImageLoadError(ValueError):
 
 @dataclass(frozen=True)
 class PreprocessSpec:
-    resize: int = 256
-    center_crop: int = 224
+    """resize: int = short side (TorchVision Resize(int)); (h, w) = exact size (Resize((h, w)))."""
+
+    resize: int | tuple[int, int] = 256
+    center_crop: Optional[int] = 224
     mean: tuple[float, float, float] = (0.485, 0.456, 0.406)
     std: tuple[float, float, float] = (0.229, 0.224, 0.225)
     input_shape: tuple[int, int, int, int] = (1, 3, 224, 224)
 
+    @property
+    def output_hw(self) -> tuple[int, int]:
+        if self.center_crop is not None:
+            return (self.center_crop, self.center_crop)
+        if isinstance(self.resize, tuple):
+            return self.resize
+        raise ValueError("short-side resize needs a center_crop to give a fixed size")
+
     @classmethod
     def from_contract(cls, contract: dict) -> "PreprocessSpec":
-        """Build from config/model.json (same keys as the Arm course model_spec.json)."""
+        """Build from a model contract JSON (same keys as the Arm course model_spec.json)."""
         inp = contract["input"]
         prep = inp["preprocessing"]
         if inp.get("dtype") != "float32" or inp.get("layout", "nchw").lower() != "nchw":
             raise ValueError("Model contract must be float32 NCHW")
+        raw_resize = prep["resize"]
+        if isinstance(raw_resize, list):
+            if len(raw_resize) != 2:
+                raise ValueError(f"resize list must be [height, width], got {raw_resize}")
+            resize: int | tuple[int, int] = (int(raw_resize[0]), int(raw_resize[1]))
+        else:
+            resize = int(raw_resize)
+        crop = prep.get("center_crop")
         spec = cls(
-            resize=int(prep["resize"]),
-            center_crop=int(prep["center_crop"]),
+            resize=resize,
+            center_crop=None if crop is None else int(crop),
             mean=tuple(float(x) for x in prep["mean"]),
             std=tuple(float(x) for x in prep["std"]),
             input_shape=tuple(int(x) for x in inp["shape"]),
         )
-        if spec.input_shape != (1, 3, spec.center_crop, spec.center_crop):
-            raise ValueError(f"Input shape {spec.input_shape} inconsistent with crop {spec.center_crop}")
+        h, w = spec.output_hw
+        if spec.input_shape != (1, 3, h, w):
+            raise ValueError(f"Input shape {spec.input_shape} inconsistent with preprocessing output {(h, w)}")
         if len(spec.mean) != 3 or len(spec.std) != 3 or min(spec.std) <= 0:
             raise ValueError("mean/std must have 3 entries and std must be positive")
         return spec
@@ -101,9 +123,23 @@ def center_crop(img: Image.Image, size: int) -> Image.Image:
     return img.crop((left, top, left + size, top + size))
 
 
+def resize_exact(img: Image.Image, size: tuple[int, int]) -> Image.Image:
+    """TorchVision Resize((h, w)) semantics for PIL images (bilinear, antialiased, aspect not kept)."""
+    h, w = size
+    if img.size == (w, h):
+        return img
+    return img.resize((w, h), Image.BILINEAR)
+
+
 def image_to_array(img: Image.Image, spec: PreprocessSpec = PreprocessSpec()) -> np.ndarray:
-    """Resize, crop, normalise -> contiguous float32 array of shape [1, 3, H, W]."""
-    cropped = center_crop(resize_short_side(img, spec.resize), spec.center_crop)
+    """Resize, [crop], normalise -> contiguous float32 array of shape [1, 3, H, W]."""
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    if isinstance(spec.resize, tuple):
+        resized = resize_exact(img, spec.resize)
+    else:
+        resized = resize_short_side(img, spec.resize)
+    cropped = resized if spec.center_crop is None else center_crop(resized, spec.center_crop)
     hwc = np.asarray(cropped, dtype=np.uint8)
     chw = hwc.transpose(2, 0, 1).astype(np.float32) / np.float32(255.0)
     mean = np.asarray(spec.mean, dtype=np.float32).reshape(3, 1, 1)

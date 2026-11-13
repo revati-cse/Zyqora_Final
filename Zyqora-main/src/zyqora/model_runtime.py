@@ -115,6 +115,7 @@ class ExecuTorchClassifier:
     thread_count: Optional[int] = field(init=False, default=None)
     thread_control: str = field(init=False, default="not requested")
     load_time_ms: float = field(init=False, default=0.0)
+    output_shape: Optional[tuple[int, ...]] = field(init=False, default=None)
     _module: Any = field(init=False, default=None, repr=False)
 
     def __post_init__(self) -> None:
@@ -176,6 +177,18 @@ class ExecuTorchClassifier:
             raise ModelLoadError(
                 f"{self.pte_path.name} expects input {sizes}, but the model contract says {tuple(self.input_shape)}"
             )
+        # Output check: stops a 2-class model being decoded as ImageNet (or vice versa).
+        if hasattr(meta, "output_tensor_meta"):
+            try:
+                out_sizes = tuple(int(s) for s in meta.output_tensor_meta(0).sizes())
+            except Exception as exc:
+                raise ModelLoadError(f"{self.pte_path.name}: cannot read output metadata: {exc}") from exc
+            if out_sizes != (1, self.num_classes):
+                raise ModelLoadError(
+                    f"{self.pte_path.name} produces output {out_sizes}, but this model profile expects "
+                    f"(1, {self.num_classes}). Wrong model for this profile/decoder."
+                )
+            self.output_shape = out_sizes
 
     # -- inference ---------------------------------------------------------
     def infer(self, array: np.ndarray) -> InferenceOutput:
@@ -213,4 +226,5 @@ class ExecuTorchClassifier:
             "thread_count": self.thread_count,
             "thread_control": self.thread_control,
             "load_time_ms": self.load_time_ms,
+            "output_shape": list(self.output_shape) if self.output_shape else None,
         }
