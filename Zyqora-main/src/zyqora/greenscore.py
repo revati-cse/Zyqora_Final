@@ -146,6 +146,11 @@ class GreenScore:
         with closing(self._connect()) as conn:
             conn.execute("INSERT OR IGNORE INTO users (user_id, created_at) VALUES (?, ?)", (user_id, _now()))
 
+    def list_users(self) -> list[sqlite3.Row]:
+        with closing(self._connect()) as conn:
+            return conn.execute("SELECT user_id, display_name, total_points, created_at FROM users "
+                                "ORDER BY total_points DESC, user_id").fetchall()
+
     def points(self, user_id: str) -> int:
         _check_user_id(user_id)
         with closing(self._connect()) as conn:

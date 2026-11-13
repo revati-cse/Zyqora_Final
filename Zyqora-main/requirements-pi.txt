@@ -14,3 +14,8 @@ executorch==1.3.1
 numpy>=2.0
 pillow==12.3.0
 pyyaml>=6.0
+
+# Web dashboard API (serve_zyqora.py)
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+python-multipart>=0.0.9

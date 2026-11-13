@@ -1,0 +1,29 @@
+{
+  "scope": "VALIDATION",
+  "source": "Reported by the Zyqora team from their training run (MacBook Air M3, PyTorch MPS). Not reproduced in this repository. Development validation results, NOT independent TEST or official hackathon results.",
+  "model_profile": "waste_mobilenetv2",
+  "dataset": {"training_images": 20556, "validation_images": 2000, "validation_per_class": {"Organic": 1000, "Recyclable": 1000}},
+  "best_checkpoint_epoch": 4,
+  "accuracy": 0.9665,
+  "per_class_accuracy": {"Organic": 0.960, "Recyclable": 0.973},
+  "confusion_matrix": {
+    "rows": "actual", "columns": "predicted", "labels": ["Organic", "Recyclable"],
+    "matrix": [[960, 40], [27, 973]]
+  },
+  "derived_from_confusion_matrix": {
+    "Organic": {"precision": 0.9726, "recall": 0.9600, "f1": 0.9663},
+    "Recyclable": {"precision": 0.9605, "recall": 0.9730, "f1": 0.9667}
+  },
+  "ecoguard_threshold_table": [
+    {"threshold": 0.80, "review_rate": 0.0410, "accepted_accuracy": 0.9786},
+    {"threshold": 0.90, "review_rate": 0.0755, "accepted_accuracy": 0.9832},
+    {"threshold": 0.95, "review_rate": 0.1085, "accepted_accuracy": 0.9871},
+    {"threshold": 0.98, "review_rate": 0.1505, "accepted_accuracy": 0.9912}
+  ],
+  "limitations": [
+    "Two trained classes only (Organic, Recyclable); no Residual class.",
+    "Softmax scores are not calibrated probabilities; calibration has not been measured.",
+    "A confidence threshold does not reliably detect items outside the two classes.",
+    "Raspberry Pi latency, CPU and memory must be measured on the Pi (scripts/benchmark_pi.py)."
+  ]
+}

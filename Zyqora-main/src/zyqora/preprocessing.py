@@ -14,6 +14,7 @@ Steps: open -> EXIF orientation -> RGB -> resize (bilinear, PIL antialias)
 from __future__ import annotations
 
 import json
+from io import BytesIO
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -22,6 +23,7 @@ import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 SUPPORTED_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".bmp", ".webp"})
+DECODABLE_FORMATS = frozenset({"JPEG", "PNG", "BMP", "WEBP", "MPO"})  # MPO = multi-picture JPEG from phones
 
 
 class ImageLoadError(ValueError):
@@ -87,8 +89,21 @@ def load_rgb(path: str | Path) -> Image.Image:
         raise ImageLoadError(f"Image not found: {p}")
     if p.suffix.lower() not in SUPPORTED_EXTENSIONS:
         raise ImageLoadError(f"Unsupported image format '{p.suffix}' for {p.name}")
+    return _decode(p, p.name)
+
+
+def load_rgb_bytes(data: bytes, name: str = "upload") -> Image.Image:
+    """Decode an in-memory image (e.g. an HTTP upload) exactly like load_rgb, without a temp file."""
+    if not data:
+        raise ImageLoadError(f"Empty image data: {name}")
+    return _decode(BytesIO(data), name)
+
+
+def _decode(source, name: str) -> Image.Image:
     try:
-        with Image.open(p) as im:
+        with Image.open(source) as im:
+            if im.format not in DECODABLE_FORMATS:
+                raise ImageLoadError(f"Unsupported image format {im.format!r} for {name}")
             im.load()
             im = ImageOps.exif_transpose(im)
             if im.mode == "P" and "transparency" in im.info:
@@ -96,9 +111,12 @@ def load_rgb(path: str | Path) -> Image.Image:
             # Matches the Arm course: RGBA/LA alpha is discarded, grayscale is replicated.
             rgb = im.convert("RGB")
     except (UnidentifiedImageError, OSError, SyntaxError, Image.DecompressionBombError) as exc:
-        raise ImageLoadError(f"Corrupted or unreadable image {p.name}: {exc}") from exc
+        detail = "not a readable image" if isinstance(exc, UnidentifiedImageError) else str(exc)
+        if isinstance(exc, UnidentifiedImageError) and isinstance(source, Path):
+            detail = str(exc)
+        raise ImageLoadError(f"Corrupted or unreadable image {name}: {detail}") from exc
     if rgb.width < 1 or rgb.height < 1:
-        raise ImageLoadError(f"Image has invalid dimensions {rgb.size}: {p.name}")
+        raise ImageLoadError(f"Image has invalid dimensions {rgb.size}: {name}")
     return rgb
 
 

@@ -1,5 +1,9 @@
-# Unit tests only need these (python -m unittest discover -s tests -t .).
-# Without torch/executorch, the two real-runtime tests are skipped automatically.
+# Unit tests (python -m unittest discover -s tests -t .).
+# Without torch/executorch the two real-runtime tests are skipped automatically;
+# without fastapi/httpx the API tests are skipped.
 numpy>=2.0
 pillow>=10.1
 pyyaml>=6.0
+fastapi>=0.115,<1
+python-multipart>=0.0.9
+httpx>=0.27
