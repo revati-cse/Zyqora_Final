@@ -1,0 +1,15 @@
+# Zyqora station hardware. Nothing here is required: without a camera use --camera folder:<dir>;
+# the actuator defaults to SIMULATION. No physical actuator has been validated by the authors.
+
+camera:
+  backend: auto          # auto | picamera2 | rpicam | folder:<dir>
+  width: 640             # capture size; the model resizes to 224x224 anyway, so larger costs time only
+  height: 480
+
+actuator:
+  backend: simulation    # simulation | gpio  (gpio ALSO needs zyqora_station.py --enable-actuator)
+  pulse_s: 0.5
+  active_high: true
+  pins:                  # BCM numbers, one output per bin action; EXAMPLE values, set to your wiring
+    COMPOST: 17
+    RECYCLE: 27
