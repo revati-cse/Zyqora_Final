@@ -38,6 +38,7 @@ The UI tests and API tests mock the network or the ExecuTorch binding. They prov
 - **Lenis smooth scrolling** was not added: a dashboard of short pages doesn't benefit from it. Motion is used only for the result card entrance. Three.js is lazy-loaded only on Overview.
 - shadcn/ui components were written into `src/components/ui` (shadcn style: Radix + CVA + tailwind-merge) instead of fetched with the shadcn CLI.
 - ESLint 9 is used for linting; npm reports it as out of support (dev-only tool).
+- `npm audit` (2026-11-14): **0 vulnerabilities in production dependencies** (the code served to browsers). Vitest was upgraded 3.2.7 → 4.1.12 to fix 2 critical dev-only advisories (tinypool, @vitest/mocker). 7 moderate dev-only advisories remain in `minimatch` via `typescript-eslint` (glob DoS in the linter; it only reads this repo's own lint config). The lockfile was regenerated with npm 11 because npm 10.9 crashes (`edgesOut`) when resolving Vitest 4's peers; `npm ci` with npm 10 installs it fine.
 
 ---
 
