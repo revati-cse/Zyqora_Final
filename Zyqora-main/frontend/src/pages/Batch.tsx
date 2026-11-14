@@ -88,7 +88,7 @@ export default function Batch() {
         )} />
       {model.data && !model.data.ready && <Alert variant="danger" className="mb-4" title="MODEL UNAVAILABLE">{model.data.code}: {model.data.message}</Alert>}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,320px)_1fr]">
+      <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,320px)_1fr]">
         <Card>
           <CardHeader><CardTitle>Queue</CardTitle><CardDescription>Batch <span className="font-mono">{batchId}</span></CardDescription></CardHeader>
           <CardContent className="space-y-4">
@@ -124,8 +124,8 @@ export default function Batch() {
               <MetricCard label="Classified" value={summary.total} />
               <MetricCard label="ACCEPT / REVIEW" value={`${summary.accepted} / ${summary.review}`} />
               <MetricCard label="Median inference" value={fmtMs(summary.inference_latency.median_ms, 2)} hint={`p95 ${fmtMs(summary.inference_latency.p95_ms, 2)}`} />
-              <MetricCard label={acc ? "Accuracy (labelled)" : "Accuracy"} value={acc ? fmtPct(acc.accuracy, 1) : "needs labels"}
-                hint={acc ? `${acc.correct}/${acc.labelled_images} correct` : "add ground truth to measure"} />
+              <MetricCard label={acc ? "Accuracy (labelled)" : "Accuracy"} value={acc ? fmtPct(acc.accuracy, 1) : "—"}
+                hint={acc ? `${acc.correct}/${acc.labelled_images} correct` : "needs ground-truth labels"} />
             </div>
           )}
           {summaryError != null && <ErrorState error={summaryError} title="Could not load batch summary" />}
@@ -160,9 +160,9 @@ export default function Batch() {
                         </Select>
                       </Td>
                       <Td>{x.result ? <CategoryBadge category={x.result.predicted_category} lang={settings.lang} /> : "—"}</Td>
-                      <Td className="text-right font-mono text-xs tabular">{x.result ? fmtPct(x.result.confidence, 2) : "—"}</Td>
+                      <Td className="whitespace-nowrap text-right font-mono text-xs tabular">{x.result ? fmtPct(x.result.confidence, 2) : "—"}</Td>
                       <Td>{x.result ? <DecisionBadge status={x.result.ecoguard.status} lang={settings.lang} /> : "—"}</Td>
-                      <Td className="hidden text-right font-mono text-xs tabular md:table-cell">{x.result ? fmtMs(x.result.timing.inference_ms, 2) : "—"}</Td>
+                      <Td className="hidden whitespace-nowrap text-right font-mono text-xs tabular md:table-cell">{x.result ? fmtMs(x.result.timing.inference_ms, 2) : "—"}</Td>
                     </tr>
                   ))}
                 </tbody>

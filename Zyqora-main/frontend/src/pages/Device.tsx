@@ -69,12 +69,14 @@ export default function Device() {
           </div>
           <div className="mt-6 grid gap-6 md:grid-cols-2">
             <Card>
-              <CardHeader><CardTitle>Inference runtime</CardTitle><CardDescription>Model loaded once in the API process</CardDescription></CardHeader>
+              <CardHeader><CardTitle>Inference runtime</CardTitle><CardDescription>Model loaded once in the API process. Single requests on an idle Pi run at a lower clock than back-to-back benchmark runs.</CardDescription></CardHeader>
               <CardContent>
                 <dl className="grid grid-cols-2 gap-3 text-sm">
                   {[
                     ["Runtime", d.runtime ?? "—"], ["Backend", d.backend ?? "—"], ["Threads", d.threads ?? "—"],
                     ["Last inference", fmtMs(d.last_inference_ms, 2)], ["CPU cores", d.cpu_count ?? "—"],
+                    ["CPU clock now", d.cpufreq?.cpu_mhz ? `${d.cpufreq.cpu_mhz.toFixed(0)} / ${d.cpufreq.cpu_max_mhz?.toFixed(0) ?? "?"} MHz` : "not available"],
+                    ["Frequency governor", d.cpufreq?.governor ?? "not available"],
                     ["Load average", d.load_average ? d.load_average.map((x) => x.toFixed(2)).join(" / ") : "—"],
                   ].map(([k, v]) => <div key={String(k)}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-mono">{v}</dd></div>)}
                 </dl>

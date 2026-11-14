@@ -1,6 +1,6 @@
 {
   "scope": "VALIDATION",
-  "source": "Reported by the Zyqora team from their training run (MacBook Air M3, PyTorch MPS). Not reproduced in this repository. Development validation results, NOT independent TEST or official hackathon results.",
+  "source": "Reported by the Zyqora team from their training run (MacBook Air M3, PyTorch MPS); reproduced on the Raspberry Pi 5 (below). Development validation results, NOT independent TEST or official hackathon results.",
   "model_profile": "waste_mobilenetv2",
   "dataset": {
     "training_images": 20556,

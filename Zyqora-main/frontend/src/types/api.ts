@@ -185,6 +185,7 @@ export interface DeviceMetrics {
   load_average: number[] | null;
   memory: { total_mb: number | null; available_mb: number | null; used_mb: number | null; used_percent: number | null };
   temperature_c: number | null;
+  cpufreq?: { cpu_mhz: number | null; cpu_max_mhz: number | null; governor: string | null };
   uptime_s: number | null;
   process_rss_mb: number | null;
   process_peak_rss_mb: number | null;

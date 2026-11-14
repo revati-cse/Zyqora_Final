@@ -70,7 +70,7 @@ export default function History() {
                     <Td className="text-right font-mono text-xs tabular">{fmtPct(it.confidence, 2)}</Td>
                     <Td><DecisionBadge status={it.ecoguard_status} lang={settings.lang} /></Td>
                     <Td className="hidden font-mono text-xs md:table-cell">{it.disposal_action}</Td>
-                    <Td className="hidden text-right font-mono text-xs tabular md:table-cell">{fmtMs(it.inference_ms, 2)}</Td>
+                    <Td className="hidden whitespace-nowrap text-right font-mono text-xs tabular md:table-cell">{fmtMs(it.inference_ms, 2)}</Td>
                     <Td className="hidden text-xs text-muted-foreground lg:table-cell">{it.source}</Td>
                   </tr>
                   {open === it.id && (

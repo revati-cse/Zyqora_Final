@@ -218,7 +218,7 @@ export default function ModelPerformance() {
             </CardHeader>
             <CardContent>
               {!live ? <Skeleton className="h-20" /> : live.total === 0 ? <p className="text-sm text-muted-foreground">No classifications yet.</p> : (
-                <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3">
                   <MetricCard label="Classifications" value={fmtNum(live.total)} />
                   <MetricCard label="Median inference" value={fmtMs(live.inference_latency.median_ms, 2)} />
                   <MetricCard label="p95 inference" value={fmtMs(live.inference_latency.p95_ms, 2)} />

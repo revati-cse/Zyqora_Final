@@ -45,6 +45,22 @@ def _meminfo() -> dict[str, Optional[float]]:
     return out
 
 
+def _cpufreq() -> dict:
+    """Current/max clock of cpu0 and the frequency governor (explains latency on an idle Pi)."""
+    base = Path("/sys/devices/system/cpu/cpu0/cpufreq")
+
+    def read(name: str) -> Optional[str]:
+        try:
+            return (base / name).read_text().strip()
+        except OSError:
+            return None
+
+    cur, mx = read("scaling_cur_freq"), read("cpuinfo_max_freq")
+    return {"cpu_mhz": int(cur) / 1000 if cur and cur.isdigit() else None,
+            "cpu_max_mhz": int(mx) / 1000 if mx and mx.isdigit() else None,
+            "governor": read("scaling_governor")}
+
+
 def _uptime_s() -> Optional[float]:
     try:
         return float(Path("/proc/uptime").read_text().split()[0])
@@ -96,6 +112,7 @@ class Telemetry:
             "load_average": list(load) if load else None,
             "memory": _meminfo(),
             "temperature_c": cpu_temperature_c(),
+            "cpufreq": _cpufreq(),
             "uptime_s": _uptime_s(),
             "process_rss_mb": proc["vm_rss_mb"],
             "process_peak_rss_mb": proc["vm_hwm_mb"],

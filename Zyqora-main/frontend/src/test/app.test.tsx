@@ -148,7 +148,7 @@ describe("batch and history", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /Classify queue/ })).toBeEnabled());
     await user.click(screen.getByRole("button", { name: /Classify queue/ }));
     expect(await screen.findByText(/2 done · 1 failed · 3 total/)).toBeInTheDocument();
-    expect(screen.getByText("needs labels")).toBeInTheDocument();                // no accuracy without labels
+    expect(screen.getByText("needs ground-truth labels")).toBeInTheDocument();    // no accuracy without labels
     expect(screen.getByRole("button", { name: /Retry failed/ })).toBeEnabled();
     expect(calls.filter((c) => c.method === "POST").length).toBe(3);
   });
