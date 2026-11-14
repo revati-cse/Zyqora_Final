@@ -6,7 +6,7 @@
 #   python scripts/verify_waste_model.py           (on the Pi, with the real .pte)
 # after which `python scripts/verify_waste_model.py --activate` switches `active` to waste_mobilenetv2.
 
-active: imagenet_mobilenetv2
+active: waste_mobilenetv2
 fallback: imagenet_mobilenetv2     # used by the station when the active model cannot be loaded
 
 profiles:
@@ -16,7 +16,7 @@ profiles:
     pte: models/mobilenetv2_waste_fp32_xnnpack.pte
     contract: config/model_waste.json          # exact 224x224 resize, ImageNet mean/std, output [1, 2]
     classes: config/classes_waste.json         # index 0 Organic -> COMPOST, index 1 Recyclable -> RECYCLE
-    sha256: null                               # pinned by scripts/verify_waste_model.py --activate on the Pi
+    sha256: b019fc68bfd654994d2e1c05e314a28e15aa5952d6952b7b22a0dfcd54da094f                               # pinned by scripts/verify_waste_model.py --activate on the Pi
     ecoguard:
       threshold: 0.95        # provisional candidate from VALIDATION data (review 10.85%, accepted acc. 98.71%)
       min_margin: 0.0

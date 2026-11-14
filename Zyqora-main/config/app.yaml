@@ -5,7 +5,7 @@ model:
   pte: models/mobilenetv2_fp32_xnnpack.pte     # final artifact chosen in MODEL_COMPARISON.md
   contract: config/model.json                  # input shape + preprocessing (Arm course model spec)
   labels: null                                 # null = bundled src/zyqora/data/imagenet_labels.json
-  num_threads: null                            # null = ExecuTorch default; set from benchmark_pi.py thread sweep
+  num_threads: 2                            # null = ExecuTorch default; set from benchmark_pi.py thread sweep
   require_backend: XnnpackBackend
 
 mapping: config/mapping.json

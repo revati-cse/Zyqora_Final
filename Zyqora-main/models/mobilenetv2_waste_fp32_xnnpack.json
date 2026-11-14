@@ -1,0 +1,48 @@
+{
+  "profile": "waste_mobilenetv2",
+  "pte": "mobilenetv2_waste_fp32_xnnpack.pte",
+  "sha256": "b019fc68bfd654994d2e1c05e314a28e15aa5952d6952b7b22a0dfcd54da094f",
+  "size_bytes": 8880392,
+  "output_shape": [
+    1,
+    2
+  ],
+  "classes": [
+    "Organic",
+    "Recyclable"
+  ],
+  "verification": {
+    "passed": true,
+    "labelled_images": 100,
+    "accuracy": 0.93,
+    "images_folder": "/tmp/zq_val",
+    "min_accuracy": 0.85,
+    "utc": "2026-11-14T05:18:40+00:00",
+    "platform": {
+      "device_model": "Raspberry Pi 5 Model B Rev 1.1",
+      "is_raspberry_pi_5": true,
+      "machine": "aarch64",
+      "platform": "Linux-6.18.50+rpt-rpi-2712-aarch64-with-glibc2.41",
+      "python": "3.12.14",
+      "cpu_temperature_c": 36.4
+    },
+    "runtime": {
+      "runtime": "ExecuTorch",
+      "executorch_version": "1.3.1+cpu",
+      "pte": "/home/pi/Zyqora_Final/Zyqora-main/models/mobilenetv2_waste_fp32_xnnpack.pte",
+      "pte_size_mb": 8.880392,
+      "registered_backends": [
+        "OpenvinoBackend",
+        "XnnpackBackend"
+      ],
+      "num_threads_requested": null,
+      "thread_count": 4,
+      "thread_control": "runtime default",
+      "load_time_ms": 0.038092,
+      "output_shape": [
+        1,
+        2
+      ]
+    }
+  }
+}
