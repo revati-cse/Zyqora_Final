@@ -164,6 +164,12 @@ def main() -> int:
 
     cfg = load_detector_config(args.config) if args.config else load_detector_config()
     names = args.profiles or [n for n, p in cfg.profiles.items() if p.file.is_file()]
+    import importlib.util
+    have_ort = importlib.util.find_spec("onnxruntime") is not None
+    skipped = [n for n in names if cfg.get(n).runtime == "onnxruntime" and not have_ort]
+    if skipped:
+        print(f"skipped {', '.join(skipped)}: onnxruntime is not installed (optional; pip install onnxruntime to compare)")
+        names = [n for n in names if n not in skipped]
     facts = platform_facts()
     device = "pi5" if facts["is_raspberry_pi_5"] else platform.machine().lower()
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -181,7 +187,8 @@ def main() -> int:
             proc = subprocess.run(cmd, capture_output=True, text=True)
             line = next((ln for ln in reversed(proc.stdout.splitlines()) if ln.startswith("{")), None)
             if proc.returncode != 0 or not line:
-                print(f"{name} threads {th}: FAILED\n{proc.stderr[-2000:]}", file=sys.stderr)
+                last = [ln for ln in proc.stderr.strip().splitlines() if ln.strip()][-1:] or ["(no error output)"]
+                print(f"{name} threads {th}: FAILED: {last[0]}", file=sys.stderr)
                 continue
             r = json.loads(line)
             results.append(r)

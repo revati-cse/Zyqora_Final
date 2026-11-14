@@ -7,7 +7,7 @@ NAMMA AI hackathon, PS3 (AI for Sustainability: Edge-Based Waste Sorting). Targe
 > - **4.0 adds mixed-waste analysis.** YOLO11n finds every object, and the team's MobileNetV2 (Organic / Recyclable) classifies each crop. Organiser label profiles, disposal rules and a transparent **Green Score** are then applied. Results go to SQLite and a React dashboard with 13 pages. See [ARCHITECTURE.md](ARCHITECTURE.md).
 > - **The detector is the pretrained COCO YOLO11n, not a waste-trained detector.** It was chosen by measured held-out accuracy: VOC2007 test mAP@0.5 0.832, vs 0.813 for YOLOv8n ([DETECTION.md](DETECTION.md)). Its labels are used only as material hints. Waste-detection mAP and end-to-end mixed-waste accuracy are **not measured**: no box-annotated waste test set was available.
 > - **Measured on the Raspberry Pi 5:** the classifier reproduces validation (**96.60%** vs 96.65% reported) at **12.7 ms median** with 2 threads.
-> - **Measured on an x86 development host only:** detector and full-pipeline latency ([BENCHMARK_REPORT.md](BENCHMARK_REPORT.md)). Pi detector benchmarks are pending.
+> - **Detector on the Raspberry Pi 5 (2 threads):** YOLO11n takes 196.7 ms at 640 px (full pipeline median 224 ms) and 43.1 ms at 320 px (pipeline 61.8 ms). See [BENCHMARK_REPORT.md](BENCHMARK_REPORT.md).
 > - **Windows** scripts are provided (`setup_windows.ps1`, `start_all.ps1`) but **unverified on Windows** ([WINDOWS_SETUP.md](WINDOWS_SETUP.md)).
 > - The classifier **cannot recognise Residual waste**. Electronics recognised by the detector are routed to e-waste ([MODEL_EVALUATION.md](MODEL_EVALUATION.md)).
 

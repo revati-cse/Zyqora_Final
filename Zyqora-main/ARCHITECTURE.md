@@ -36,7 +36,7 @@ Single-item mode (`POST /api/classify`, alias of the 3.0 `/api/inference`) is un
 
 Neither model alone solves the task: the classifier gives one label per photo, and the detector's labels are not waste categories ("bottle" does not say PET or glass; there is no "can" class). Combining them gives one waste label per object.
 
-**Computational trade-off.** Latency = one detector pass + one classifier pass per waste crop (the `.pte` has a fixed batch of 1, so crops run sequentially). On the development host (x86, 2 threads, not the Pi) that is about 64 ms for YOLO11n-640 plus about 9 ms per crop (BENCHMARK_REPORT.md). `max_objects_classified` caps the worst case. YOLO at 320 px is about 4× faster but loses small objects (VOC bottle AP50 0.772 → 0.622).
+**Computational trade-off.** Latency = one detector pass + one classifier pass per waste crop (the `.pte` has a fixed batch of 1, so crops run sequentially). On the Raspberry Pi 5 (2 threads) that is 196.7 ms for YOLO11n-640 plus about 16 ms per crop; the full pipeline median is 224 ms on single-item photos (BENCHMARK_REPORT.md). `max_objects_classified` caps the worst case. YOLO at 320 px is 4.6× faster on the Pi (43.1 ms) but loses small objects (VOC bottle AP50 0.772 → 0.622).
 
 **Honesty rules in code.** The COCO label is never shown as a waste category. Ambiguous classes map to material `Unknown`. A detector/classifier disagreement (e.g. "banana" classified Recyclable) becomes REVIEW. Electronics are routed to e-waste even when the classifier says Recyclable (the known Residual gap). REVIEW items are shown as `Unknown` and get no Green Score.
 

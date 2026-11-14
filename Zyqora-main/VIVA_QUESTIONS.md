@@ -39,13 +39,13 @@ The model label is always stored separately, and a profile cannot invent a class
 **10. What runs on the Raspberry Pi and how fast?**
 Both models run on the CPU through ExecuTorch with XNNPACK.
 - **Classifier:** 12.7 ms median with 2 threads, measured on the Pi.
-- **Detector and full pipeline:** host figures exist (BENCHMARK_REPORT.md), but the Pi numbers must come from `scripts/benchmark_detector.py` on the Pi. We do not extrapolate.
+- **Detector, measured on the Pi with 2 threads:** YOLO11n takes 197 ms at 640 px (whole pipeline 224 ms) and 43 ms at 320 px (pipeline 62 ms). We use 640 for photos and 320 for live camera.
 
 **11. Do you measure power?**
 No. CPU load is not converted to watts. On a Pi 5 the dashboard shows the PMIC's own rail readings (`vcgencmd pmic_read_adc`), labelled as rails-only. Real power needs an inline USB-C meter.
 
 **12. What is the latency cost of the two-stage design?**
-One detector pass, plus one classifier pass per waste crop (the `.pte` has a fixed batch of 1). It is capped by `max_objects_classified`. On the host, 2 threads: about 64 ms YOLO + 9 ms per crop.
+One detector pass, plus one classifier pass per waste crop (the `.pte` has a fixed batch of 1). It is capped by `max_objects_classified`. On the Pi, 2 threads: about 197 ms YOLO at 640 px + about 16 ms per crop.
 
 **13. Does it work offline?**
 Yes. All models and rules are local files and nothing is downloaded at runtime; the dashboard is served by the device itself.

@@ -34,7 +34,7 @@ Checklist:
 | 2:40–3:30 | **Green Score** | Gauge, item list, the weighted table; calculator with 90/80/100 → 89 | "Project-defined indicator, 40/35/25 weights, every rating has a written reason. It never uses model confidence, and it is not a lifecycle assessment." |
 | 3:30–4:20 | **Model Comparison** | Comparison table, VOC chart | "YOLO11n at 640 was chosen by held-out accuracy: VOC mAP@0.5 0.832 vs 0.813 for YOLOv8n. Classifier: 96.6% validation, reproduced on this Pi at 12.7 ms. Waste-detection mAP is not measured; we had no annotated waste test set." |
 | 4:20–5:00 | **System Monitoring / Analytics** | CPU, RAM, temperature, PMIC rails; charts of what was just analysed | "Everything is stored locally in SQLite, nothing leaves the device. We don't convert CPU load into watts; real power needs a meter." |
-| 5:00–5:30 | **Live Camera** (only if opened on the Pi itself or over https) | Continuous mode | Read the measured FPS and round-trip time; they are real, not targets. |
+| 5:00–5:30 | **Live Camera** (only if opened on the Pi itself or over https) | Settings → detector `yolo11n_320` first, then continuous mode | Read the measured FPS and round-trip time; they are real, not targets. At 640 px the Pi needs about 0.2 s per frame. |
 
 ## If something fails
 | Problem | What to do |

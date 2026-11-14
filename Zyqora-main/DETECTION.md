@@ -27,7 +27,7 @@ The candidates were YOLO11n and YOLOv8n, each at 640 and 320 px. Accuracy was me
 | yolo11n_320 | onnxruntime | 320 | 0.762 | 0.563 | 0.622 | 0.748 | 0.719 / 0.761 |
 | yolov8n_320 | onnxruntime | 320 | 0.757 | 0.558 | 0.647 | 0.745 | 0.725 / 0.757 |
 
-YOLO11n beats YOLOv8n overall at both sizes and is also faster on the development host (x86: 38 vs 45 ms at 640, 2 threads). It is smaller too (10.2 vs 12.2 MiB as `.pte`). 640 px is the default because small objects such as bottles lose 15 AP points at 320 px. The 320-px profile is offered for faster live-camera use. Pi 5 latency for these profiles has **not been measured yet**: run `scripts/benchmark_detector.py` on the Pi (BENCHMARK_REPORT.md).
+YOLO11n beats YOLOv8n overall at both sizes and is also faster on the development host (x86: 38 vs 45 ms at 640, 2 threads). It is smaller too (10.2 vs 12.2 MiB as `.pte`). 640 px is the default because small objects such as bottles lose 15 AP points at 320 px. The 320-px profile is offered for faster live-camera use. **Measured on the Raspberry Pi 5 (2 threads):** YOLO forward is 196.7 ms at 640 px and 43.1 ms at 320 px. The full pipeline median is 224.0 / 61.8 ms (BENCHMARK_REPORT.md). Use 640 for photo analysis and 320 for continuous Live Camera.
 
 **These are generic-object numbers.** No waste-detection mAP exists, because no box-annotated waste test set was available in the build environment (see TACO below). The end-to-end accuracy on mixed-waste photos is also **not measured**: it needs labelled mixed-waste images.
 

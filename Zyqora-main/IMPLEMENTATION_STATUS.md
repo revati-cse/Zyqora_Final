@@ -27,6 +27,10 @@ So every latency below is **host** latency unless it says Pi.
 | Training / data pipeline: `prepare_taco.py` (seeded image-level split → YOLO labels), `train_detector.py` (requires `--confirm`), `export_detector.py`, `check_detector_parity.py`, `evaluate_detector.py` | `prepare_taco.py` run on the real TACO annotations (labels only) |
 | Python suite | **158 tests pass** (115 existing + 43 new) |
 
+### Measured on the Raspberry Pi 5 (by the team, 2026-11-14)
+- `benchmark_detector.py` with ExecuTorch, 2 / 4 threads. YOLO11n-640: 196.7 / 158.5 ms forward median, pipeline 224.0 / 183.7 ms, 447 MB peak RSS. YOLO11n-320: 43.1 / 32.8 ms, pipeline 61.8 / 48.9 ms, 392 MB (BENCHMARK_REPORT.md).
+- ONNX profiles were not measured: `onnxruntime` is not installed on the Pi (optional).
+
 ### BLOCKED
 | Item | Why |
 |---|---|
@@ -37,7 +41,6 @@ So every latency below is **host** latency unless it says Pi.
 | Item | What is needed |
 |---|---|
 | Windows: `setup_windows.ps1`, `start_*.ps1`, `requirements-windows.txt` | Run on a Windows 10/11 PC. Wheels exist for every package, and the Windows ExecuTorch binary contains XNNPACK (static check). Executing a PowerShell interpreter in this environment was not permitted. |
-| Detector, pipeline latency, RAM and temperature **on the Raspberry Pi 5** | `python scripts/benchmark_detector.py --threads 2 4 --images data/validation --pipeline` on the Pi (README_PI §17) |
 | PMIC rail power reading (`vcgencmd pmic_read_adc`) | Parser unit-tested on sample text only; check on the Pi. Wall power needs a USB-C meter. |
 | MobileNetV2 accuracy on detector crops; suitability of the 0.95 EcoGuard threshold for crops | Labelled crops |
 | Live Camera page with a real webcam | A browser with a camera (secure context) |

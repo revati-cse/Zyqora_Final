@@ -89,7 +89,25 @@ Still to measure on the Pi: dashboard HTTP latency and camera-to-result latency 
 
 ## Zyqora AI 4.0: detector and mixed-waste pipeline
 
-### How to measure on the Pi (not yet run)
+### Raspberry Pi 5 results (measured by the team, 2026-11-14)
+`python scripts/benchmark_detector.py --threads 2 4 --images data/validation --max-images 50 --pipeline` on the Pi (Raspberry Pi 5 Model B Rev 1.1, ExecuTorch 1.3.1, XNNPACK); every setting ran in a fresh process. Pipeline = YOLO + MobileNetV2 on 50 validation photos. These are single-item photos, so about one crop each; a photo with N waste objects adds roughly one MobileNetV2 run per extra object (about 16 ms on the Pi with 2 threads: 12.7 ms inference plus preprocessing, from the single-item benchmark above).
+
+| Profile | Threads | YOLO forward median | p95 | CPU ms / forward | Peak RSS (detector process) | Full pipeline median |
+|---|---:|---:|---:|---:|---:|---:|
+| **yolo11n_640** (default) | **2** (configured) | **196.7 ms** | 197.2 ms | 374.1 | 447 MB | **224.0 ms** |
+| yolo11n_640 | 4 | 158.5 ms | 159.1 ms | 566.7 | 447 MB | 183.7 ms |
+| yolo11n_320 | 2 | 43.1 ms | 43.2 ms | 81.6 | 392 MB | 61.8 ms |
+| yolo11n_320 | 4 | 32.8 ms | 33.0 ms | 113.7 | 392 MB | 48.9 ms |
+
+ONNX Runtime profiles were not measured on the Pi (`onnxruntime` is optional and not installed there).
+
+What it means:
+- **640 px on the Pi costs about 0.2 s per photo.** That is fine for the AI Detection page (one photo per click). For continuous Live Camera it means at most about 4 frames per second, so choose `yolo11n_320` in Settings for live demos. 320 px is 4.6× faster but less accurate on small objects (VOC bottle AP50 0.772 → 0.622).
+- **4 threads instead of 2** saves 20% of YOLO latency at 640 px, but uses 52% more CPU time per image. The configured 2 threads (`config/app.yaml`, shared by both models) leaves two cores for the web server and camera.
+- The x86 host is 3× faster than the Pi at 640 px (63.7 vs 196.7 ms, 2 threads), so host numbers must never be quoted as Pi performance.
+- Load + warm-up time, detect() latency, throughput and temperature are in the JSON files (`reports/benchmarks/pi5_detector_*.json`) once they are committed from the Pi.
+
+### How to measure on the Pi
 ```bash
 python scripts/benchmark_detector.py --threads 2 4 --images data/validation --max-images 50 --pipeline
 ```
