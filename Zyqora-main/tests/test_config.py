@@ -1,3 +1,4 @@
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -26,10 +27,17 @@ class ConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             p = Path(t) / "app.yaml"
             base = DEFAULT_APP_CONFIG.read_text()
-            for bad in (base.replace("threshold: 0.40", "threshold: 1.7"),
-                        base.replace("threshold: 0.40", "threshold: high"),
-                        base.replace("num_threads: null", "num_threads: 0"),
-                        base.replace("points_verified_correct: 10", "points_verified_correct: -10"),
+
+            def setting(key: str, value: str) -> str:
+                # Replace whatever value the local config has (e.g. num_threads tuned on the Pi).
+                new, n = re.subn(rf"(?m)^(\s*{key}:)[^#\n]*", rf"\g<1> {value}", base, count=1)
+                self.assertEqual(n, 1, f"{key} not found in app.yaml")
+                return new
+
+            for bad in (setting("threshold", "1.7"),
+                        setting("threshold", "high"),
+                        setting("num_threads", "0"),
+                        setting("points_verified_correct", "-10"),
                         "model: [unclosed", "just a string"):
                 p.write_text(bad)
                 with self.assertRaises(ConfigError, msg=bad[:40]):
