@@ -256,10 +256,18 @@ profiles:
             with self.assertRaises(ConfigError, msg=text):
                 load_models_config(load_app_config(), bad)
 
-    def test_shipped_models_config_keeps_imagenet_active_until_verified(self):
+    def test_shipped_models_config_only_activates_a_verified_waste_model(self):
+        """The waste profile may be active only after verify_waste_model.py --activate pinned its SHA-256,
+        and a present model file must match that pin (a swapped or corrupted .pte is caught here too)."""
+        from zyqora.profiles import file_sha256
+
         models = load_models_config(load_app_config())
-        self.assertEqual(models.active, "imagenet_mobilenetv2")
         waste = models.get("waste_mobilenetv2")
+        self.assertIn(models.active, ("imagenet_mobilenetv2", "waste_mobilenetv2"))
+        if models.active == "waste_mobilenetv2":
+            self.assertIsNotNone(waste.sha256, "waste profile active without a pinned sha256 (run verify_waste_model.py --activate)")
+            if waste.pte.is_file():
+                self.assertEqual(file_sha256(waste.pte), waste.sha256)
         self.assertEqual(waste.ecoguard.threshold, 0.95)
         self.assertFalse(waste.ecoguard.calibrated)
         self.assertEqual(models.get("imagenet_mobilenetv2").contract, DEFAULT_MODEL_CONTRACT)
