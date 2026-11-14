@@ -1,5 +1,63 @@
 # Implementation status
 
+## Phase 4: Zyqora AI 4.0, mixed-waste detection (branch `claude/compassionate-mccarthy-6ec5a6`, 2026-11-14)
+
+**Where this work ran:** an x86_64 cloud container (4 vCPU), branched from `feature/zyqora-ai-3-dashboard` at `e9abd80`.
+- **Reachable:** GitHub releases and PyPI / npm.
+- **Not reachable:** the Raspberry Pi, a Windows machine, the TACO image host, Hugging Face.
+
+So every latency below is **host** latency unless it says Pi.
+
+### Implemented and tested here
+| Area | Evidence |
+|---|---|
+| YOLO detector: pretrained YOLO11n (COCO) exported to ExecuTorch XNNPACK `.pte` and ONNX at 640 / 320 px, SHA-pinned; NumPy letterbox, decode, class-aware or agnostic NMS, min-area filter, empty handling; ExecuTorch or ONNX Runtime runner; explicit error codes | unit tests (geometry, NMS, decode back to original pixels, contract / hash / missing-file errors); parity vs Ultralytics 117/122 boxes @640; real-model E2E |
+| Model selection on held-out data: YOLO11n vs YOLOv8n × 640 / 320, PASCAL VOC2007 test (4,952 images) | `reports/detector_eval/*.json`: YOLO11n-640 mAP@0.5 0.832 / mAP@0.5:0.95 0.628; the shipped `.pte` measured directly (identical to ONNX) |
+| Detection metrics module (pycocotools 101-point AP, VOC difficult handling, P / R at operating threshold) | unit tests incl. perfect = 1.0 |
+| Crop classification with the existing MobileNetV2 `.pte`, same contract and EcoGuard, model loaded once | real-model E2E (bottle / glass / TV / organic photos) |
+| Organiser label profiles (Organic/Recyclable, Recyclable/Non-Recyclable, Food/Waste), model label kept separate; Unknown for unreliable items | unit + UI tests |
+| Material hints from detector labels (conservative: ambiguous → Unknown; not-waste classes ignored); detector/classifier conflict → REVIEW; e-waste override | unit tests |
+| Mixed-waste pipeline (whole-image fallback, object limit, annotated image) | unit tests with fakes + real-model E2E |
+| `GreenScoreEngine` (40/35/25, bands, explanations, not-scored reasons, image aggregate with coverage, configurable rules) | unit tests incl. the required `90·0.40 + 80·0.35 + 100·0.25 == 89` |
+| Disposal recommendation engine (configurable; never claims universal recyclability) | unit tests |
+| SQLite: `detections`, `detected_objects`, `green_scores`, `system_metrics`, `settings`; FK cascade, indexes, `user_version` migrations, retention purge, CSV export | unit tests (cascade, idempotent migration, purge, summary) |
+| API: `/api/models/status`, `/api/detect`, `/api/classify`, `/api/greenscore` (+ `/rules`), `/api/detections` CRUD + image + annotated + CSV, `DELETE /api/history/{id}`, `/api/analytics`, `/api/system/metrics` (+ history), `/api/benchmarks`, `GET/PUT /api/settings`, purge | 8 API tests (fake detector runner) + live HTTP smoke tests with the real models |
+| Dashboard (React, existing stack): **AI Detection**, **Live Camera** (single + continuous frames, measured FPS / round trip), **Green Score** (gauge, per-item breakdown, trends, calculator, rules), **Hackathon Showcase**; Overview, Analytics, Model Comparison, Detection History (search / filters / delete / export), System Monitoring and Settings (detection settings stored on device) extended; Green Points = renamed 3.0 rewards | `tsc` clean, ESLint clean, **16 Vitest tests**, `npm run build` OK; Playwright on the real stack: 3 real photos analysed, all 13 pages render, 0 console errors, **0 px horizontal overflow** at 1440 and 390 px and on iPhone 13 emulation |
+| Reproducible benchmarks: `scripts/benchmark_detector.py` (load, forward, detect(), CPU, RSS, throughput, temperature; optional full pipeline) | `reports/benchmarks/x86_64_*.json` (**host, not Pi**) |
+| Training / data pipeline: `prepare_taco.py` (seeded image-level split → YOLO labels), `train_detector.py` (requires `--confirm`), `export_detector.py`, `check_detector_parity.py`, `evaluate_detector.py` | `prepare_taco.py` run on the real TACO annotations (labels only) |
+| Python suite | **158 tests pass** (115 existing + 43 new) |
+
+### BLOCKED
+| Item | Why |
+|---|---|
+| Waste-specific detector (fine-tuning on TACO) and waste-detection mAP | TACO images are hosted on a domain this environment cannot reach. Training needs a GPU for practical time, and the project rule needs the team's approval before any (re)training. The pipeline is ready (DETECTION.md). |
+| End-to-end mixed-waste accuracy (per-object correctness, missed detections, mixed-image success, unknown rate) | No labelled mixed-waste images with per-object boxes exist in the repo or were provided. |
+
+### UNVERIFIED (written, not run on the target)
+| Item | What is needed |
+|---|---|
+| Windows: `setup_windows.ps1`, `start_*.ps1`, `requirements-windows.txt` | Run on a Windows 10/11 PC. Wheels exist for every package, and the Windows ExecuTorch binary contains XNNPACK (static check). Executing a PowerShell interpreter in this environment was not permitted. |
+| Detector, pipeline latency, RAM and temperature **on the Raspberry Pi 5** | `python scripts/benchmark_detector.py --threads 2 4 --images data/validation --pipeline` on the Pi (README_PI §17) |
+| PMIC rail power reading (`vcgencmd pmic_read_adc`) | Parser unit-tested on sample text only; check on the Pi. Wall power needs a USB-C meter. |
+| MobileNetV2 accuracy on detector crops; suitability of the 0.95 EcoGuard threshold for crops | Labelled crops |
+| Live Camera page with a real webcam | A browser with a camera (secure context) |
+
+### Not changed / still pending from Phase 3
+- Independent TEST evaluation
+- PyTorch ↔ `.pte` parity on the Mac
+- Physical camera, speaker and actuator tests
+- Tamil review
+
+New Tamil strings in `config/disposal_rules.yaml` also need review.
+
+### Design decisions worth knowing
+- Ultralytics (AGPL-3.0) is used only offline for export; runtime decoding is our own NumPy code. The exported weights remain AGPL-3.0 (DETECTION.md).
+- ExecuTorch is the default detector runtime: no new dependency on the Pi. ONNX Runtime profiles exist because ONNX was faster on the x86 host; the Pi decides.
+- The MobileNetV2 `.pte` has a fixed batch of 1, so "batch inference" of crops is sequential. Re-exporting with a dynamic batch needs the checkpoint, which is not in this environment.
+- Mixed-waste mode never actuates the sorter.
+
+---
+
 ## Phase 3: Zyqora AI 3.0 dashboard (branch `feature/zyqora-ai-3-dashboard`, 2026-11-13)
 
 **Where this work ran:** the same x86_64 cloud container as Phase 2. The Raspberry Pi, the MacBook, the real `.pte`, the checkpoints and the TEST dataset were **not reachable**; no Remote Control folders were shared. GitHub still had **no committed waste `.pte`** (`models/` only contains `.gitkeep` and `README.md`).
@@ -34,7 +92,7 @@ The UI tests and API tests mock the network or the ExecuTorch binding. They prov
 ### Requirement gaps (honest list)
 - **Residual:** not a model class. REVIEW is a decision, not a third class; residual items can be confidently mis-sorted. Proposed fixes are in MODEL_EVALUATION.md.
 - **Browser camera** needs a secure context (https or localhost). Over plain http on the LAN, use the Pi camera button or file upload. No TLS setup is included.
-- **Continuous video classification** is not implemented (single-shot by design).
+- **Continuous video classification** is not implemented in 3.0 (single-shot by design). 4.0 adds continuous frame analysis on the Live Camera page.
 - **Lenis smooth scrolling** was not added: a dashboard of short pages doesn't benefit from it. Motion is used only for the result card entrance. Three.js is lazy-loaded only on Overview.
 - shadcn/ui components were written into `src/components/ui` (shadcn style: Radix + CVA + tailwind-merge) instead of fetched with the shadcn CLI.
 - ESLint 9 is used for linting; npm reports it as out of support (dev-only tool).

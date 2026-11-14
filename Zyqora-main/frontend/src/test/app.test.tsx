@@ -33,8 +33,8 @@ describe("navigation and status", () => {
     renderAt("/classify");
     expect(await screen.findByRole("heading", { level: 1, name: "Live Classification" })).toBeInTheDocument();
     const nav = screen.getAllByRole("navigation", { name: "Main" })[0];
-    await user.click(within(nav).getByRole("link", { name: "History" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeInTheDocument();
+    await user.click(within(nav).getByRole("link", { name: "Detection History" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Detection History" })).toBeInTheDocument();
   });
 
   it("shows real connection state, including DEVICE DISCONNECTED", async () => {
@@ -154,8 +154,11 @@ describe("batch and history", () => {
   });
 
   it("renders history rows with decisions", async () => {
-    mockApi({ ...baseRoutes(), "/api/history": () => ({ body: historyPage }) });
+    mockApi({ ...baseRoutes(), "/api/history": () => ({ body: historyPage }),
+      "/api/detections": () => ({ body: { items: [], total: 0, limit: 20, offset: 0 } }) });
+    const user = userEvent.setup();
     renderAt("/history");
+    await user.click(await screen.findByRole("tab", { name: "Single-item classifications" }));
     const rows = await screen.findAllByTestId("history-row");
     expect(rows).toHaveLength(2);
     expect(within(rows[0]).getByText("REVIEW REQUIRED")).toBeInTheDocument();

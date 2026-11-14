@@ -27,6 +27,9 @@ Every error has the same shape and HTTP status:
 | `ALREADY_VERIFIED` | 409 | GreenScore event was already verified |
 | `GREENSCORE_ERROR` | 409/422 | Other GreenScore rule violation (e.g. REVIEW item verified without a correct bin) |
 | `NOT_FOUND` | 404 | Unknown route or id |
+| `DETECTOR_NOT_FOUND`, `DETECTOR_HASH_MISMATCH`, `DETECTOR_CONTRACT_MISMATCH`, `DETECTOR_LOAD_FAILED`, `DETECTOR_DISABLED` | 503 | YOLO detector missing / differs from its pin in `config/detector.yaml` / wrong output shape / runtime error / started with `--no-detector`. Single-item endpoints keep working. |
+| `DETECTOR_INFERENCE_FAILED`, `INFERENCE_FAILED` | 500 | A model ran but produced an unusable output (never replaced by a fake result) |
+| `UNSUPPORTED_CLASSIFIER` | 503 | Mixed-waste mode needs the waste classifier profile (`direct_classes`) |
 
 ## Endpoints
 | Method | Path | Purpose |
@@ -50,6 +53,28 @@ Every error has the same shape and HTTP status:
 | GET | `/api/voice/messages` · `/api/voice/{en|ta}/{KEY}.wav` | Instruction text / offline WAV clip |
 | POST | `/api/voice/play` | `{lang, key}`: play the clip on the device speaker (`aplay`) |
 
+### Zyqora AI 4.0 (mixed-waste detection)
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/models/status` | `classifier` (as `/api/model/status`), `detector` (profile, file, size, runtime, imgsz, load + warm-up ms, licence, `trained_on`), `label_profiles`, `greenscore_rules`, `pipeline.ready` |
+| POST | `/api/models/reload` | Reload classifier and detector |
+| POST | `/api/detect` | multipart: `file`, `user_id?`, `source` (`upload`/`browser-camera`/`camera-frame`), `persist` (default true) → **detection result**: `objects[]` (box in original pixels, `detection_label` + confidence, `classification.model_label` + score + EcoGuard, `material`, `conflict`, `organiser_category`, `organiser_labels` for every profile, `recommendation`, `green_score` with components), `summary` (counts by organiser label / profile / material / stream), `image_green_score`, `timing` (detector pre/inference/post, classification, pipeline ms), `notes`, `image_url`, `annotated_url`. Never actuates a bin. |
+| POST | `/api/classify` | Alias of `/api/inference` (single item) |
+| POST | `/api/greenscore` | JSON: `{components: {recycling_potential, environmental_impact, disposal_suitability}}` or `{material}` or `{model_class, decision}` → Green Score with breakdown (GREEN_SCORE.md) |
+| GET | `/api/greenscore/rules` | Weights, bands, every rating with its rationale, disclaimer |
+| GET | `/api/detections` | `limit`, `offset`, `q` (file / object / label / material), `material`, `model_label`, `has_review`, `min_score`, `date_from`, `date_to` |
+| GET · DELETE | `/api/detections/{id}` | Full stored result / delete it (objects, scores and image cascade) |
+| GET | `/api/detections/{id}/image` · `/annotated.jpg` | Stored image (≤1600 px) / boxes drawn server-side |
+| GET | `/api/detections/export.csv` | One row per object |
+| DELETE | `/api/history/{id}` | Delete one single-item classification |
+| GET | `/api/history` · `/api/history/{id}` | (3.0) single-item history; mixed-waste history is `/api/detections` |
+| GET | `/api/analytics` | `days?` → `{classifications, detections}`; detection analytics: counts, per-profile distributions, material, streams, daily, Green Score series, latency series, stored system samples |
+| GET | `/api/system/metrics` | Device telemetry + classifier/detector status and load times + `pmic` (Pi 5 rail readings) + `measured_power_watts` (`null` unless metered). Stores a sample at most every `metrics_sample_seconds`. |
+| GET | `/api/system/history` | Stored system samples (`days`) |
+| GET | `/api/benchmarks` | All benchmark / evaluation JSON (committed `reports/` + local `outputs/`), each with its `platform` |
+| GET · PUT | `/api/settings` | Effective settings, overrides, defaults, options. PUT a partial object (`detector_profile`, `label_profile`, `conf_threshold`, `iou_threshold`, `agnostic_nms`, `max_detections`, `max_objects_classified`, `crop_padding`, `min_box_area_fraction`, `whole_image_fallback`, `retention_days`, `metrics_sample_seconds`; `null` resets a key). Validated; 422 on bad values. |
+| POST | `/api/settings/purge?days=N` | Delete analyses and system samples older than N days |
+
 ### Classification response (abridged)
 ```json
 {
@@ -70,6 +95,16 @@ Every error has the same shape and HTTP status:
 A REVIEW result keeps `predicted_category` (for evaluation), has `disposal_action: "MANUAL_REVIEW"` and `sort.actuate: false`, and includes the reasons in English and Tamil.
 
 ## Examples
+
+Mixed-waste analysis:
+```bash
+curl -F file=@mixed.jpg http://<pi-ip>:8000/api/detect
+```
+Green Score calculator:
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"components":{"recycling_potential":90,"environmental_impact":80,"disposal_suitability":100}}' http://<pi-ip>:8000/api/greenscore
+```
+
 ```bash
 curl -s http://<pi-ip>:8000/api/model/status
 ```

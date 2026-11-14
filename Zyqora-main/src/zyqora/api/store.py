@@ -81,6 +81,10 @@ class HistoryStore:
                                values)
             return int(cur.lastrowid)
 
+    def delete(self, item_id: int) -> bool:
+        with self._lock, closing(self._connect()) as conn, conn:
+            return conn.execute("DELETE FROM classifications WHERE id = ?", (item_id,)).rowcount > 0
+
     def set_thumbnail(self, item_id: int, present: bool) -> None:
         with self._lock, closing(self._connect()) as conn, conn:
             conn.execute("UPDATE classifications SET has_thumbnail = ? WHERE id = ?", (int(present), item_id))

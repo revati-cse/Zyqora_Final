@@ -1,0 +1,77 @@
+# Segregation recommendations (Zyqora AI 4.0). Rule-based, configurable.
+# Guidance is general: local municipal rules decide what is actually accepted, so no
+# rule claims that a material is always recyclable. Tamil text needs review by a fluent
+# speaker before public use (same status as config/voice.yaml).
+#
+# Lookup order for an item: special_stream (from the detector material table)
+#   -> material (when the detector gives a likely material) -> model class -> unknown.
+# REVIEW items always get `review`, whatever their material.
+schema_version: 1
+version: disposal-1
+
+streams:
+  COMPOST:       {en: "Organic / compost",          ta: "மக்கும் கழிவு / உரம்"}
+  RECYCLE:       {en: "Dry recyclables",            ta: "உலர் மறுசுழற்சி"}
+  E_WASTE:       {en: "E-waste collection point",   ta: "மின்னணுக் கழிவு சேகரிப்பு மையம்"}
+  SPECIAL:       {en: "Special collection / residual", ta: "சிறப்புச் சேகரிப்பு / மீதக் கழிவு"}
+  MANUAL_REVIEW: {en: "Manual review",              ta: "கைமுறைச் சரிபார்ப்பு"}
+
+materials:
+  Plastic:
+    stream: RECYCLE
+    en: "Check local recycling acceptance for this plastic (look for the resin code). Empty and rinse it first."
+    ta: "இந்த பிளாஸ்டிக் உள்ளூரில் மறுசுழற்சிக்கு ஏற்கப்படுகிறதா எனச் சரிபார்க்கவும். முதலில் காலி செய்து கழுவவும்."
+    warnings: ["Films, bags and multi-layer packs are often not accepted."]
+  Paper:
+    stream: RECYCLE
+    en: "Recycle with dry paper where accepted. Keep it clean and dry."
+    ta: "ஏற்கப்படும் இடத்தில் உலர் காகிதத்துடன் மறுசுழற்சி செய்யவும். சுத்தமாகவும் உலர்வாகவும் வைக்கவும்."
+    warnings: ["Food-soiled or wet paper contaminates paper recycling."]
+  Cardboard:
+    stream: RECYCLE
+    en: "Flatten and recycle with dry cardboard where accepted."
+    ta: "தட்டையாக்கி, ஏற்கப்படும் இடத்தில் உலர் அட்டையுடன் மறுசுழற்சி செய்யவும்."
+    warnings: ["Greasy boxes (e.g. pizza) are not clean cardboard."]
+  Metal:
+    stream: RECYCLE
+    en: "Metal recycling where accepted. Empty and rinse cans."
+    ta: "ஏற்கப்படும் இடத்தில் உலோக மறுசுழற்சிக்கு அனுப்பவும். டப்பாக்களைக் காலி செய்து கழுவவும்."
+    warnings: ["Pressurised cans and sharp edges need care."]
+  Glass:
+    stream: RECYCLE
+    en: "Glass recycling where accepted. Bottles and jars only, empty and rinsed."
+    ta: "ஏற்கப்படும் இடத்தில் கண்ணாடி மறுசுழற்சி. பாட்டில்கள், ஜாடிகள் மட்டும்; காலி செய்து கழுவவும்."
+    warnings: ["Drinking glasses, mirrors and window glass are usually not accepted with bottles.", "Wrap broken glass before handling."]
+  Organic:
+    stream: COMPOST
+    en: "Organic collection or composting where permitted."
+    ta: "அனுமதிக்கப்பட்ட இடத்தில் மக்கும் கழிவுச் சேகரிப்பு அல்லது உரமாக்கல்."
+    warnings: ["Remove any packaging, stickers or plastic first."]
+  E-Waste:
+    stream: E_WASTE
+    en: "Take it to a designated e-waste collection point. Do not put electronics in household bins."
+    ta: "அங்கீகரிக்கப்பட்ட மின்னணுக் கழிவு சேகரிப்பு மையத்தில் ஒப்படைக்கவும். வீட்டுக் குப்பைத் தொட்டியில் போட வேண்டாம்."
+    warnings: ["Batteries can start fires in waste trucks; remove or tape them where possible."]
+  Other:
+    stream: SPECIAL
+    en: "Mixed or composite item: check local rules (textile donation, special collection or residual waste)."
+    ta: "கலப்புப் பொருள்: உள்ளூர் விதிகளைச் சரிபார்க்கவும் (துணி நன்கொடை, சிறப்புச் சேகரிப்பு அல்லது மீதக் கழிவு)."
+    warnings: []
+
+model_classes:     # used when the material is unknown
+  Recyclable:
+    stream: RECYCLE
+    en: "Dry recyclables. The material was not confirmed: check local acceptance before recycling."
+    ta: "உலர் மறுசுழற்சி. பொருள் வகை உறுதிசெய்யப்படவில்லை: மறுசுழற்சிக்கு முன் உள்ளூர் விதிகளைச் சரிபார்க்கவும்."
+    warnings: ["Contaminated packaging: check the material and local disposal rules."]
+  Organic:
+    stream: COMPOST
+    en: "Organic collection or composting where permitted."
+    ta: "அனுமதிக்கப்பட்ட இடத்தில் மக்கும் கழிவுச் சேகரிப்பு அல்லது உரமாக்கல்."
+    warnings: ["Remove any packaging first."]
+
+review:
+  stream: MANUAL_REVIEW
+  en: "Not classified reliably. Please ask a supervisor to check this item; no bin is opened automatically."
+  ta: "நம்பகமாக வகைப்படுத்தப்படவில்லை. மேற்பார்வையாளரைச் சரிபார்க்கச் சொல்லவும்; எந்தத் தொட்டியும் தானாகத் திறக்காது."
+  warnings: []

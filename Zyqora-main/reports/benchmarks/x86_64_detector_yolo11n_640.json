@@ -1,0 +1,798 @@
+{
+  "kind": "detector_benchmark",
+  "profile": "yolo11n_640",
+  "platform": {
+    "device_model": null,
+    "is_raspberry_pi_5": false,
+    "machine": "x86_64",
+    "platform": "Linux-6.18.44-fc-v470-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "cpu_temperature_c": null
+  },
+  "measured_utc": "2026-11-14T07:13:48Z",
+  "warning": "Measured on a development machine, NOT on the Raspberry Pi 5.",
+  "results": [
+    {
+      "kind": "detector_benchmark",
+      "profile": "yolo11n_640",
+      "file": "yolo11n_640_xnnpack.pte",
+      "file_size_bytes": 10683072,
+      "runtime": "executorch",
+      "backend": "ExecuTorch/XNNPACK",
+      "imgsz": 640,
+      "threads_requested": 2,
+      "load_ms": 130.29862599978514,
+      "model_only": {
+        "mean_ms": 63.84470972,
+        "median_ms": 63.689582,
+        "p95_ms": 77.97526824999998,
+        "min_ms": 49.609408,
+        "max_ms": 88.762167,
+        "count": 50
+      },
+      "detect_end_to_end": {
+        "mean_ms": 71.21288236667169,
+        "median_ms": 67.83776849988499,
+        "p95_ms": 88.89818325014858,
+        "min_ms": 64.00082599975576,
+        "max_ms": 91.96604899989325,
+        "count": 30
+      },
+      "cpu_ms_per_inference": 121.24692842,
+      "cpu_utilisation_percent_of_one_core": 189.8902935342226,
+      "throughput_inferences_per_second": 15.66145188242968,
+      "memory_mb": {
+        "start": {
+          "vm_rss_mb": 679.921875,
+          "vm_hwm_mb": 679.921875
+        },
+        "end": {
+          "vm_rss_mb": 768.234375,
+          "vm_hwm_mb": 778.82421875
+        }
+      },
+      "temperature_c": {
+        "before": null,
+        "after": null
+      },
+      "runs": 50,
+      "warmup": 5,
+      "input": "001083f05db4352b.jpg",
+      "pipeline": {
+        "kind": "pipeline_benchmark",
+        "images": 40,
+        "classifier_profile": "waste_mobilenetv2",
+        "pipeline_latency": {
+          "mean_ms": 80.33427612493824,
+          "median_ms": 78.34611999987828,
+          "p95_ms": 97.80866329983837,
+          "min_ms": 66.24009400002251,
+          "max_ms": 125.977335999778,
+          "count": 40
+        },
+        "classification_per_crop_ms": 8.57906159090909,
+        "mean_crops_per_image": 1.1,
+        "mean_objects_per_image": 2.725,
+        "images_per_second": 10.099664137133399,
+        "cpu_ms_per_image": 148.281016975,
+        "memory_mb_end": {
+          "vm_rss_mb": 799.14453125,
+          "vm_hwm_mb": 801.625
+        },
+        "per_image": [
+          {
+            "pipeline_ms": 80.91606599964507,
+            "detector_ms": 53.09410200015918,
+            "classification_ms": 15.089122,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 125.977335999778,
+            "detector_ms": 103.84106399988013,
+            "classification_ms": 9.525904,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 86.44737400027225,
+            "detector_ms": 63.85919800004558,
+            "classification_ms": 11.358533,
+            "crops": 1,
+            "objects": 0,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 86.89313900003981,
+            "detector_ms": 63.97198800004844,
+            "classification_ms": 9.537579,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 78.32790099973863,
+            "detector_ms": 58.91413800009104,
+            "classification_ms": 7.539425,
+            "crops": 1,
+            "objects": 5,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 81.3888190000398,
+            "detector_ms": 57.85521899997548,
+            "classification_ms": 9.810572,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 81.9951729999957,
+            "detector_ms": 55.70631000000503,
+            "classification_ms": 11.047794,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 83.91901499999221,
+            "detector_ms": 57.43416300038007,
+            "classification_ms": 14.838239999999999,
+            "crops": 3,
+            "objects": 6,
+            "waste_items": 3
+          },
+          {
+            "pipeline_ms": 68.76213299983647,
+            "detector_ms": 47.94079500015869,
+            "classification_ms": 8.228163,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 73.38657299987972,
+            "detector_ms": 53.78009400010342,
+            "classification_ms": 8.294551,
+            "crops": 1,
+            "objects": 10,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 74.43510700022671,
+            "detector_ms": 52.13329399975919,
+            "classification_ms": 8.139889,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 78.36433900001794,
+            "detector_ms": 55.03585499991459,
+            "classification_ms": 10.092997,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 73.76471799989304,
+            "detector_ms": 55.39211099994645,
+            "classification_ms": 5.77405,
+            "crops": 1,
+            "objects": 14,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 73.56417900018641,
+            "detector_ms": 52.30436200008626,
+            "classification_ms": 11.273952999999999,
+            "crops": 2,
+            "objects": 3,
+            "waste_items": 2
+          },
+          {
+            "pipeline_ms": 67.25424299975202,
+            "detector_ms": 49.15787799973259,
+            "classification_ms": 7.88445,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 79.01444199978869,
+            "detector_ms": 56.32000500008871,
+            "classification_ms": 8.296281,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 79.11393799986399,
+            "detector_ms": 56.3100869999289,
+            "classification_ms": 8.617436,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 83.52209099984975,
+            "detector_ms": 61.43962599981023,
+            "classification_ms": 10.736641,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 84.28190599988739,
+            "detector_ms": 60.56228900024507,
+            "classification_ms": 9.218193,
+            "crops": 1,
+            "objects": 4,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 66.24009400002251,
+            "detector_ms": 47.68009000008533,
+            "classification_ms": 7.974766,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 68.49401299996316,
+            "detector_ms": 50.94464200010407,
+            "classification_ms": 6.805324,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 74.13828200014905,
+            "detector_ms": 51.81206899987956,
+            "classification_ms": 7.730388,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 75.8912340002098,
+            "detector_ms": 56.849892000172986,
+            "classification_ms": 8.307051,
+            "crops": 1,
+            "objects": 5,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 87.86172799955239,
+            "detector_ms": 63.889474000006885,
+            "classification_ms": 11.490747,
+            "crops": 1,
+            "objects": 4,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 96.66294799990283,
+            "detector_ms": 72.03257699984533,
+            "classification_ms": 10.01268,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 86.72668199960754,
+            "detector_ms": 62.120708000293234,
+            "classification_ms": 8.851754,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 97.72923799982891,
+            "detector_ms": 70.16922100001466,
+            "classification_ms": 10.466068,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 93.21296200005236,
+            "detector_ms": 63.347669999984646,
+            "classification_ms": 12.365908,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 80.48697899994295,
+            "detector_ms": 55.98315899987938,
+            "classification_ms": 9.627293,
+            "crops": 1,
+            "objects": 4,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 91.66443999993135,
+            "detector_ms": 63.48754300006476,
+            "classification_ms": 11.088202,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 74.0152919997854,
+            "detector_ms": 54.42398700006379,
+            "classification_ms": 8.937033,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 76.95228400007181,
+            "detector_ms": 55.76189899966266,
+            "classification_ms": 8.756083,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 72.1635149998292,
+            "detector_ms": 53.9982900004361,
+            "classification_ms": 7.857597,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 75.82756300007532,
+            "detector_ms": 55.156106000140426,
+            "classification_ms": 9.020032,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 72.69311500022013,
+            "detector_ms": 53.85699399994337,
+            "classification_ms": 8.031782,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 72.22722699998485,
+            "detector_ms": 53.85804500019731,
+            "classification_ms": 8.030274,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 71.53042699974321,
+            "detector_ms": 51.51655899999241,
+            "classification_ms": 8.468121,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 67.52564499993241,
+            "detector_ms": 52.180587999828276,
+            "classification_ms": 4.987849,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 70.68114100002276,
+            "detector_ms": 47.536513000068226,
+            "classification_ms": 12.631345,
+            "crops": 2,
+            "objects": 3,
+            "waste_items": 2
+          },
+          {
+            "pipeline_ms": 99.31774400001814,
+            "detector_ms": 77.91901600012352,
+            "classification_ms": 10.73464,
+            "crops": 1,
+            "objects": 5,
+            "waste_items": 1
+          }
+        ]
+      }
+    },
+    {
+      "kind": "detector_benchmark",
+      "profile": "yolo11n_640",
+      "file": "yolo11n_640_xnnpack.pte",
+      "file_size_bytes": 10683072,
+      "runtime": "executorch",
+      "backend": "ExecuTorch/XNNPACK",
+      "imgsz": 640,
+      "threads_requested": 4,
+      "load_ms": 114.14824799976486,
+      "model_only": {
+        "mean_ms": 39.89222548,
+        "median_ms": 39.696227,
+        "p95_ms": 44.0861649,
+        "min_ms": 34.487879,
+        "max_ms": 52.953312,
+        "count": 50
+      },
+      "detect_end_to_end": {
+        "mean_ms": 49.788212800028,
+        "median_ms": 49.30138049985544,
+        "p95_ms": 54.79597910000393,
+        "min_ms": 43.286203000207024,
+        "max_ms": 63.61613099988972,
+        "count": 30
+      },
+      "cpu_ms_per_inference": 112.46299954,
+      "cpu_utilisation_percent_of_one_core": 281.8745846927908,
+      "throughput_inferences_per_second": 25.063761934656185,
+      "memory_mb": {
+        "start": {
+          "vm_rss_mb": 679.8046875,
+          "vm_hwm_mb": 679.8046875
+        },
+        "end": {
+          "vm_rss_mb": 767.93359375,
+          "vm_hwm_mb": 778.75390625
+        }
+      },
+      "temperature_c": {
+        "before": null,
+        "after": null
+      },
+      "runs": 50,
+      "warmup": 5,
+      "input": "001083f05db4352b.jpg",
+      "pipeline": {
+        "kind": "pipeline_benchmark",
+        "images": 40,
+        "classifier_profile": "waste_mobilenetv2",
+        "pipeline_latency": {
+          "mean_ms": 55.78535739994095,
+          "median_ms": 54.898075499977494,
+          "p95_ms": 66.30520934998003,
+          "min_ms": 46.92449999993187,
+          "max_ms": 71.35882999955356,
+          "count": 40
+        },
+        "classification_per_crop_ms": 6.547834750000001,
+        "mean_crops_per_image": 1.1,
+        "mean_objects_per_image": 2.725,
+        "images_per_second": 15.622106102481183,
+        "cpu_ms_per_image": 147.86985212500002,
+        "memory_mb_end": {
+          "vm_rss_mb": 799.17578125,
+          "vm_hwm_mb": 801.91796875
+        },
+        "per_image": [
+          {
+            "pipeline_ms": 60.73356600018087,
+            "detector_ms": 38.30640899968785,
+            "classification_ms": 11.033884,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 54.1350689995852,
+            "detector_ms": 35.24459399977786,
+            "classification_ms": 6.901354,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 52.90087000003041,
+            "detector_ms": 35.99206800026877,
+            "classification_ms": 6.613625,
+            "crops": 1,
+            "objects": 0,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 57.94238200041946,
+            "detector_ms": 38.886465999894426,
+            "classification_ms": 7.665874,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 67.98840700002984,
+            "detector_ms": 43.182389000321564,
+            "classification_ms": 8.769534,
+            "crops": 1,
+            "objects": 5,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 66.21661999997741,
+            "detector_ms": 45.16335100015567,
+            "classification_ms": 6.844297,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 55.900540000038745,
+            "detector_ms": 38.3321369999976,
+            "classification_ms": 6.711947,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 63.57574599996951,
+            "detector_ms": 39.63664999992034,
+            "classification_ms": 13.275876,
+            "crops": 3,
+            "objects": 6,
+            "waste_items": 3
+          },
+          {
+            "pipeline_ms": 58.97495599992908,
+            "detector_ms": 38.68516300008196,
+            "classification_ms": 7.795414,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 56.335701999614685,
+            "detector_ms": 38.4454459999688,
+            "classification_ms": 6.658013,
+            "crops": 1,
+            "objects": 10,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 58.814153999719565,
+            "detector_ms": 40.91837799978748,
+            "classification_ms": 7.543229,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 53.76053899999533,
+            "detector_ms": 36.25214899966522,
+            "classification_ms": 6.645194,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 51.8006110000897,
+            "detector_ms": 35.58685799998784,
+            "classification_ms": 4.784545,
+            "crops": 1,
+            "objects": 14,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 51.31785599996874,
+            "detector_ms": 33.52720800012321,
+            "classification_ms": 8.585975999999999,
+            "crops": 2,
+            "objects": 3,
+            "waste_items": 2
+          },
+          {
+            "pipeline_ms": 49.852243999794155,
+            "detector_ms": 32.45720200038704,
+            "classification_ms": 7.154469,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 51.059849000012036,
+            "detector_ms": 35.14172699988194,
+            "classification_ms": 5.301602,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 54.185023000172805,
+            "detector_ms": 37.37441099974603,
+            "classification_ms": 6.815509,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 60.61027200030367,
+            "detector_ms": 40.61069899989889,
+            "classification_ms": 8.451608,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 61.5000970001347,
+            "detector_ms": 43.078205000256276,
+            "classification_ms": 6.668695,
+            "crops": 1,
+            "objects": 4,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 55.917272999977286,
+            "detector_ms": 36.265031000311865,
+            "classification_ms": 6.955227,
+            "crops": 1,
+            "objects": 2,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 48.02664499993625,
+            "detector_ms": 32.3710860002393,
+            "classification_ms": 5.528475,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 55.437289999645145,
+            "detector_ms": 36.44305299985717,
+            "classification_ms": 6.662964,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 55.128630999661254,
+            "detector_ms": 36.627735999900324,
+            "classification_ms": 6.900896,
+            "crops": 1,
+            "objects": 5,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 51.985123999656935,
+            "detector_ms": 34.769062000123085,
+            "classification_ms": 5.746791,
+            "crops": 1,
+            "objects": 4,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 49.650595000002795,
+            "detector_ms": 33.07274700000562,
+            "classification_ms": 6.517488,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 50.9774539996215,
+            "detector_ms": 33.88355000015508,
+            "classification_ms": 6.641891,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 52.83010599987392,
+            "detector_ms": 35.182761999749346,
+            "classification_ms": 6.270515,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 54.66967399979694,
+            "detector_ms": 35.8862850002879,
+            "classification_ms": 6.937815,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 55.12647700015805,
+            "detector_ms": 37.220802000319964,
+            "classification_ms": 6.942785,
+            "crops": 1,
+            "objects": 4,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 53.35826700002144,
+            "detector_ms": 35.44983099982346,
+            "classification_ms": 6.516485,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 51.35678800024834,
+            "detector_ms": 33.6592449998534,
+            "classification_ms": 6.518258,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 49.826712000140105,
+            "detector_ms": 32.23159500021211,
+            "classification_ms": 6.322858,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 53.53459899970403,
+            "detector_ms": 35.30626100018708,
+            "classification_ms": 6.363155,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 61.19033799996032,
+            "detector_ms": 39.23012299992479,
+            "classification_ms": 7.674114,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 49.62692899971444,
+            "detector_ms": 32.39572400025281,
+            "classification_ms": 6.235936,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 71.35882999955356,
+            "detector_ms": 45.69337300017651,
+            "classification_ms": 9.563151,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 59.89086099998531,
+            "detector_ms": 37.44030999996539,
+            "classification_ms": 6.161963,
+            "crops": 1,
+            "objects": 3,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 46.92449999993187,
+            "detector_ms": 32.77816600029837,
+            "classification_ms": 4.198299,
+            "crops": 1,
+            "objects": 1,
+            "waste_items": 1
+          },
+          {
+            "pipeline_ms": 60.740916000213474,
+            "detector_ms": 37.88672600012433,
+            "classification_ms": 12.374225,
+            "crops": 2,
+            "objects": 3,
+            "waste_items": 2
+          },
+          {
+            "pipeline_ms": 56.251783999869076,
+            "detector_ms": 38.591868999901635,
+            "classification_ms": 6.850793,
+            "crops": 1,
+            "objects": 5,
+            "waste_items": 1
+          }
+        ]
+      }
+    }
+  ]
+}

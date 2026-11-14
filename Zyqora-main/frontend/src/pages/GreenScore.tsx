@@ -88,8 +88,8 @@ export default function GreenScore() {
 
   return (
     <>
-      <PageHeader title="GreenScore"
-        description="Rewards verified sorting, not AI predictions. A classification only creates a PENDING event; a supervisor checks the bin the item actually went into, and points are awarded once, only if it was the correct bin." />
+      <PageHeader title="Green Points"
+        description="Rewards for people (not the environmental Green Score). Rewards verified sorting, not AI predictions. A classification only creates a PENDING event; a supervisor checks the bin the item actually went into, and points are awarded once, only if it was the correct bin." />
       {overview.isError && <ErrorState error={overview.error} />}
       {overview.data && (
         <Alert className="mb-6">{overview.data.rule} Rule in this deployment: +{overview.data.points_verified_correct} for a verified correct bin, +{overview.data.points_verified_incorrect} otherwise.</Alert>

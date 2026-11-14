@@ -1,0 +1,67 @@
+# Detector label -> material hint (Zyqora AI 4.0).
+#
+# The detector's COCO label is NOT a waste prediction. This table only records what
+# the label tells us about the material, and is deliberately conservative:
+#   * material: one of Plastic, Paper, Cardboard, Metal, Glass, Organic, E-Waste, Other, Unknown
+#   * certainty: "likely"  = the object class is normally made of this material
+#                "unknown" = the class is made of several materials (a "bottle" can be PET or glass)
+#   * food: true when the object is food (used for the Food / Waste view)
+#   * expected_model_class: the waste-model class the object should normally get
+#     (Organic / Recyclable); null = no expectation. A disagreement with the classifier
+#     sends the item to REVIEW instead of silently trusting either model.
+#   * special_stream: overrides the bin, e.g. electronics must never go into dry recycling.
+#
+# COCO classes NOT listed here (person, car, chair, dog, ...) are treated as "not a
+# waste item": they are drawn on the image but not classified or scored.
+schema_version: 1
+version: materials-1
+
+classes:
+  # containers - material cannot be told from the label alone
+  bottle:      {material: Unknown, certainty: unknown, food: false, expected_model_class: Recyclable, note: "PET plastic or glass bottle; the label does not say which"}
+  cup:         {material: Unknown, certainty: unknown, food: false, expected_model_class: null, note: "paper, plastic, ceramic or glass cup"}
+  bowl:        {material: Unknown, certainty: unknown, food: false, expected_model_class: null, note: "plastic, paper, ceramic or metal bowl; may contain food"}
+  wine glass:  {material: Glass, certainty: likely, food: false, expected_model_class: Recyclable, note: "usually glass (drinking glass is often NOT accepted with glass bottles)"}
+  vase:        {material: Unknown, certainty: unknown, food: false, expected_model_class: null, note: "glass or ceramic"}
+  fork:        {material: Unknown, certainty: unknown, food: false, expected_model_class: null, note: "metal or plastic cutlery"}
+  knife:       {material: Unknown, certainty: unknown, food: false, expected_model_class: null, note: "metal or plastic cutlery"}
+  spoon:       {material: Unknown, certainty: unknown, food: false, expected_model_class: null, note: "metal or plastic cutlery"}
+  scissors:    {material: Other, certainty: likely, food: false, expected_model_class: null, note: "metal blades with plastic handles (mixed material)"}
+  toothbrush:  {material: Plastic, certainty: likely, food: false, expected_model_class: null, note: "mixed plastics; rarely accepted in household recycling"}
+
+  # paper
+  book:        {material: Paper, certainty: likely, food: false, expected_model_class: Recyclable, note: "paper (covers and bindings may be other materials)"}
+
+  # food (organic)
+  banana:      {material: Organic, certainty: likely, food: true, expected_model_class: Organic, note: "food / peel"}
+  apple:       {material: Organic, certainty: likely, food: true, expected_model_class: Organic, note: "food"}
+  orange:      {material: Organic, certainty: likely, food: true, expected_model_class: Organic, note: "food / peel"}
+  broccoli:    {material: Organic, certainty: likely, food: true, expected_model_class: Organic, note: "food"}
+  carrot:      {material: Organic, certainty: likely, food: true, expected_model_class: Organic, note: "food"}
+  sandwich:    {material: Organic, certainty: likely, food: true, expected_model_class: Organic, note: "food (wrapping, if any, is separate)"}
+  hot dog:     {material: Organic, certainty: likely, food: true, expected_model_class: Organic, note: "food"}
+  pizza:       {material: Organic, certainty: likely, food: true, expected_model_class: Organic, note: "food; a greasy pizza box is NOT clean cardboard"}
+  donut:       {material: Organic, certainty: likely, food: true, expected_model_class: Organic, note: "food"}
+  cake:        {material: Organic, certainty: likely, food: true, expected_model_class: Organic, note: "food"}
+  potted plant: {material: Organic, certainty: unknown, food: false, expected_model_class: null, note: "plant material plus a plastic/ceramic pot"}
+
+  # electronics -> designated e-waste collection, never the dry-recycling bin
+  cell phone:  {material: E-Waste, certainty: likely, food: false, expected_model_class: null, special_stream: E_WASTE, note: "contains a battery"}
+  laptop:      {material: E-Waste, certainty: likely, food: false, expected_model_class: null, special_stream: E_WASTE, note: "contains a battery"}
+  keyboard:    {material: E-Waste, certainty: likely, food: false, expected_model_class: null, special_stream: E_WASTE}
+  mouse:       {material: E-Waste, certainty: likely, food: false, expected_model_class: null, special_stream: E_WASTE}
+  remote:      {material: E-Waste, certainty: likely, food: false, expected_model_class: null, special_stream: E_WASTE, note: "remove batteries"}
+  tv:          {material: E-Waste, certainty: likely, food: false, expected_model_class: null, special_stream: E_WASTE}
+  microwave:   {material: E-Waste, certainty: likely, food: false, expected_model_class: null, special_stream: E_WASTE}
+  toaster:     {material: E-Waste, certainty: likely, food: false, expected_model_class: null, special_stream: E_WASTE}
+  hair drier:  {material: E-Waste, certainty: likely, food: false, expected_model_class: null, special_stream: E_WASTE}
+  clock:       {material: Unknown, certainty: unknown, food: false, expected_model_class: null, note: "may be electronic (battery) or mechanical"}
+
+  # textiles / mixed household items
+  teddy bear:  {material: Other, certainty: likely, food: false, expected_model_class: null, note: "textile"}
+  backpack:    {material: Other, certainty: likely, food: false, expected_model_class: null, note: "textile"}
+  handbag:     {material: Other, certainty: likely, food: false, expected_model_class: null, note: "textile / leather"}
+  suitcase:    {material: Other, certainty: likely, food: false, expected_model_class: null, note: "mixed materials"}
+  umbrella:    {material: Other, certainty: likely, food: false, expected_model_class: null, note: "metal frame + fabric"}
+  sports ball: {material: Other, certainty: likely, food: false, expected_model_class: null, note: "rubber / synthetic"}
+  frisbee:     {material: Plastic, certainty: likely, food: false, expected_model_class: null, note: "plastic"}

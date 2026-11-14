@@ -105,3 +105,44 @@ export function GroupedBars({ data, keys, height = 220 }: { data: Array<Record<s
     </ResponsiveContainer>
   );
 }
+
+/** Generic multi-line chart over an x key (time series of real records only). */
+export function Lines({ data, x, lines, unit, height = 220, domain }: {
+  data: Array<Record<string, string | number | null>>; x: string; lines: Array<{ key: string; name: string }>; unit?: string;
+  height?: number; domain?: [number, number];
+}) {
+  const p = usePalette();
+  const colors = [p["--chart-1"], p["--chart-3"], p["--chart-2"], p["--chart-4"]];
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={data} margin={{ left: -8, right: 8, top: 8 }}>
+        <CartesianGrid vertical={false} stroke={p["--border"]} />
+        <XAxis dataKey={x} {...axis(p)} minTickGap={24} />
+        <YAxis unit={unit} {...axis(p)} width={56} domain={domain ?? ["auto", "auto"]} />
+        <Tooltip {...tooltip(p)} formatter={(v) => (v == null ? "—" : `${Number(v).toFixed(1)}${unit ?? ""}`)} />
+        {lines.length > 1 && <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />}
+        {lines.map((l, i) => <Line key={l.key} type="monotone" dataKey={l.key} name={l.name} stroke={colors[i % 4]} dot={data.length < 30}
+          strokeWidth={i ? 1.5 : 2} isAnimationActive={false} connectNulls />)}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+/** Horizontal bars for a {label: count} mapping. */
+export function CountBars({ data, height }: { data: Record<string, number>; height?: number }) {
+  const p = usePalette();
+  const rows = Object.entries(data).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
+  return (
+    <ResponsiveContainer width="100%" height={height ?? Math.max(120, rows.length * 32 + 24)}>
+      <BarChart data={rows} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
+        <CartesianGrid horizontal={false} stroke={p["--border"]} />
+        <XAxis type="number" allowDecimals={false} {...axis(p)} />
+        <YAxis type="category" dataKey="name" {...axis(p)} width={110} />
+        <Tooltip {...tooltip(p)} cursor={{ fill: p["--border"], opacity: 0.4 }} />
+        <Bar dataKey="value" name="count" isAnimationActive={false} radius={[0, 3, 3, 0]}>
+          {rows.map((r, i) => <Cell key={r.name} fill={r.name === "Unknown" ? p["--muted-fg"] : categoryColor(p, r.name, i)} />)}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}

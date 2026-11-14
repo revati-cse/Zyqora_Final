@@ -1,15 +1,73 @@
 import { Download } from "lucide-react";
 import { useState } from "react";
-import { CategoryDonut, DecisionChart, LatencyChart, VolumeChart } from "@/components/charts/Charts";
+import { CategoryDonut, CountBars, DecisionChart, LatencyChart, Lines, VolumeChart } from "@/components/charts/Charts";
 import { EmptyState, ErrorState, MetricCard, PageHeader, ScopeTag } from "@/components/common";
 import { ConfusionMatrix } from "@/components/common/ConfusionMatrix";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Skeleton, Table, Td, Th } from "@/components/ui/misc";
-import { useAnalytics, useDevice, useModelStatus } from "@/hooks/useApi";
+import { useAnalytics, useAnalyticsAll, useDevice, useModelStatus } from "@/hooks/useApi";
 import { api } from "@/lib/api";
 import { fmtMs, fmtNum, fmtPct, toIsoEnd, toIsoStart } from "@/lib/utils";
+
+const short = (iso: string) => iso.slice(5, 16).replace("T", " ");
+
+function DetectionAnalytics() {
+  const [days, setDays] = useState<number | undefined>(undefined);
+  const q = useAnalyticsAll(days);
+  const d = q.data?.detections;
+  return (
+    <section className="mb-10" aria-labelledby="det-analytics">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <h2 id="det-analytics" className="text-lg font-semibold tracking-tight">Mixed-waste analyses <ScopeTag>stored on device</ScopeTag></h2>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="a-days" className="mb-0">Period</Label>
+          <Select id="a-days" value={days ?? ""} onChange={(e) => setDays(e.target.value ? Number(e.target.value) : undefined)}>
+            <option value="">All time</option><option value="1">Last 24 h</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option>
+          </Select>
+          <Button asChild size="sm" variant="outline"><a href={api.detectionsCsvUrl()} download><Download />CSV</a></Button>
+        </div>
+      </div>
+      {q.isError ? <ErrorState error={q.error} /> : q.isLoading ? <Skeleton className="h-72" /> : !d?.images ? (
+        <EmptyState title="No mixed-waste analyses yet">Charts appear after the first analysis on the AI Detection page.</EmptyState>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetricCard label="Images" value={fmtNum(d.images)} />
+            <MetricCard label="Objects / waste items" value={`${d.detected_objects} / ${d.waste_items}`} />
+            <MetricCard label="Reliable items" value={fmtNum(d.accepted_items)} hint={`${d.review_items} review (Unknown)`} />
+            <MetricCard label="Median pipeline" value={fmtMs(d.latency.pipeline.median_ms, 0)} hint={`p95 ${fmtMs(d.latency.pipeline.p95_ms, 0)}`} />
+          </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {Object.entries(d.by_profile).map(([name, p]) => (
+              <Card key={name} className="min-w-0"><CardHeader><CardTitle className="text-base">{p.title}</CardTitle>
+                <CardDescription>Derived from stored model labels; review items count as Unknown.</CardDescription></CardHeader>
+                <CardContent>{Object.keys(p.counts).length ? <CountBars data={p.counts} /> : <EmptyState title="No waste items" />}</CardContent></Card>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card className="min-w-0"><CardHeader><CardTitle className="text-base">Material (detector hint)</CardTitle></CardHeader>
+              <CardContent><CountBars data={d.by_material} /></CardContent></Card>
+            <Card className="min-w-0"><CardHeader><CardTitle className="text-base">Disposal streams</CardTitle></CardHeader>
+              <CardContent><CountBars data={d.by_stream} /></CardContent></Card>
+            <Card className="min-w-0"><CardHeader><CardTitle className="text-base">Daily detections</CardTitle></CardHeader>
+              <CardContent><Lines data={d.by_day} x="date" lines={[{ key: "images", name: "images" }, { key: "objects", name: "objects" }, { key: "waste_items", name: "waste items" }]} /></CardContent></Card>
+            <Card className="min-w-0"><CardHeader><CardTitle className="text-base">Green Score trend</CardTitle><CardDescription>Daily mean image score</CardDescription></CardHeader>
+              <CardContent><Lines data={d.by_day} x="date" lines={[{ key: "mean_green_score", name: "mean image Green Score" }]} domain={[0, 100]} /></CardContent></Card>
+            <Card className="min-w-0"><CardHeader><CardTitle className="text-base">Inference latency</CardTitle><CardDescription>Per analysis, measured on the device</CardDescription></CardHeader>
+              <CardContent><Lines data={d.latency.series.map((x) => ({ ...x, label: `#${x.id}` }))} x="label" unit=" ms"
+                lines={[{ key: "pipeline_ms", name: "pipeline" }, { key: "detector_ms", name: "YOLO" }, { key: "classification_ms", name: "MobileNetV2 (all crops)" }]} /></CardContent></Card>
+            <Card className="min-w-0"><CardHeader><CardTitle className="text-base">CPU and memory utilisation</CardTitle>
+              <CardDescription>System samples stored at each analysis and while System Monitoring is open</CardDescription></CardHeader>
+              <CardContent>{d.system_metrics.length ? <Lines data={d.system_metrics.map((x) => ({ ...x, t: short(x.timestamp) }))} x="t" unit="%" domain={[0, 100]}
+                lines={[{ key: "cpu_percent", name: "CPU (all cores)" }, { key: "memory_percent", name: "RAM used" }]} /> : <EmptyState title="No samples yet" />}</CardContent></Card>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
 
 export default function Analytics() {
   const [from, setFrom] = useState("");
@@ -24,8 +82,10 @@ export default function Analytics() {
 
   return (
     <>
-      <PageHeader title="Analytics" description={<>Aggregated from the persisted classification history on this device. <ScopeTag>live</ScopeTag></>}
-        actions={<Button asChild size="sm" variant="outline"><a href={api.historyCsvUrl(filters)} download><Download />Export CSV</a></Button>} />
+      <PageHeader title="Analytics" description={<>Only records stored by this device are charted; nothing is simulated. <ScopeTag>live</ScopeTag></>}
+        actions={<Button asChild size="sm" variant="outline"><a href={api.historyCsvUrl(filters)} download><Download />Export classifications CSV</a></Button>} />
+      <DetectionAnalytics />
+      <h2 className="mb-3 text-lg font-semibold tracking-tight">Single-item classifications</h2>
       <Card className="mb-6">
         <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
           <div><Label htmlFor="a-from">From</Label><Input id="a-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>

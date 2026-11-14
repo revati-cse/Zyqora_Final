@@ -4,10 +4,10 @@ import { ErrorState, PageHeader, ScopeTag } from "@/components/common";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/misc";
-import { useDevice } from "@/hooks/useApi";
+import { useSystemMetrics } from "@/hooks/useApi";
 import { useSettings } from "@/lib/settings";
 import { fmtMs, fmtUptime } from "@/lib/utils";
-import type { DeviceMetrics } from "@/types/api";
+import type { SystemMetrics } from "@/types/mixed";
 
 type Sample = { t: number; cpu: number | null; mem: number | null; temp: number | null; rss: number | null };
 const NA = <span className="text-sm font-normal text-muted-foreground">not available on this device</span>;
@@ -26,8 +26,8 @@ function Stat({ label, value, children }: { label: string; value: React.ReactNod
 
 export default function Device() {
   const { settings } = useSettings();
-  const q = useDevice();
-  const d: DeviceMetrics | undefined = q.data;
+  const q = useSystemMetrics();
+  const d: SystemMetrics | undefined = q.data;
   const [samples, setSamples] = useState<Sample[]>([]);
   const last = useRef<number>(0);
 
@@ -39,15 +39,17 @@ export default function Device() {
 
   return (
     <>
-      <PageHeader title="Device Monitoring"
-        description={<>Telemetry read from /proc and /sys on the device every {settings.pollSeconds} s (change in Settings); polling pauses while this tab is hidden. Charts show this browser session only. <ScopeTag>live</ScopeTag></>} />
+      <PageHeader title="System Monitoring"
+        description={<>Telemetry read from /proc and /sys on the device every {settings.pollSeconds} s (change in Settings); polling pauses while this tab is hidden. Sparklines show this browser session; samples are also stored for Analytics. <ScopeTag>live</ScopeTag></>} />
       {q.isError && <div className="mb-4"><ErrorState error={q.error} title="DEVICE DISCONNECTED" /></div>}
       {q.isLoading ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}</div> : d && (
         <>
           <div className="mb-6 flex flex-wrap items-center gap-2 text-sm">
             <Badge variant={q.isError ? "danger" : "accept"}>{q.isError ? "DEVICE DISCONNECTED" : "DEVICE CONNECTED"}</Badge>
             <Badge variant={d.is_raspberry_pi ? "accept" : "review"}>{d.device_model ?? "unknown model"}{d.is_raspberry_pi ? "" : " · not a Raspberry Pi"}</Badge>
-            <Badge variant={d.model_ready ? "accept" : "danger"}>{d.model_ready ? "MODEL READY" : "MODEL UNAVAILABLE"}</Badge>
+            <Badge variant={d.backend_status === "ok" ? "accept" : "danger"}>BACKEND {d.backend_status.toUpperCase()}</Badge>
+            <Badge variant={d.model_ready ? "accept" : "danger"}>{d.model_ready ? "CLASSIFIER READY" : "CLASSIFIER UNAVAILABLE"}</Badge>
+            <Badge variant={d.detector_ready ? "accept" : "danger"}>{d.detector_ready ? "DETECTOR READY" : "DETECTOR UNAVAILABLE"}</Badge>
             {d.model_profile && <Badge variant="outline">{d.model_profile}</Badge>}
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -75,6 +77,9 @@ export default function Device() {
                   {[
                     ["Runtime", d.runtime ?? "—"], ["Backend", d.backend ?? "—"], ["Threads", d.threads ?? "—"],
                     ["Last inference", fmtMs(d.last_inference_ms, 2)], ["CPU cores", d.cpu_count ?? "—"],
+                    ["Classifier load + warm-up", fmtMs(d.model_load_ms, 0)],
+                    ["Detector", d.detector_profile ?? "not loaded"], ["Detector runtime", d.detector_runtime ?? "—"],
+                    ["Detector load + warm-up", fmtMs(d.detector_load_ms, 0)],
                     ["CPU clock now", d.cpufreq?.cpu_mhz ? `${d.cpufreq.cpu_mhz.toFixed(0)} / ${d.cpufreq.cpu_max_mhz?.toFixed(0) ?? "?"} MHz` : "not available"],
                     ["Frequency governor", d.cpufreq?.governor ?? "not available"],
                     ["Load average", d.load_average ? d.load_average.map((x) => x.toFixed(2)).join(" / ") : "—"],
@@ -96,6 +101,12 @@ export default function Device() {
                   <Badge variant={d.sorter.hardware ? "review" : "neutral"}>{d.sorter.name}{d.sorter.hardware ? " · HARDWARE ENABLED" : " · SIMULATION"}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">REVIEW items never actuate a bin. Physical sorting is not verified until tested on hardware.</p>
+                <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                  <span className="w-20 text-xs text-muted-foreground">Power</span>
+                  <Badge variant="outline">measured: {d.measured_power_watts != null ? `${d.measured_power_watts.toFixed(2)} W` : "no meter connected"}</Badge>
+                  {d.pmic && <Badge variant="outline">PMIC rails: {d.pmic.rails_watts.toFixed(2)} W</Badge>}
+                </div>
+                <p className="text-xs text-muted-foreground">{d.pmic ? d.pmic.source : "PMIC rail readings unavailable (needs vcgencmd on a Raspberry Pi 5)."} Watts are never estimated from CPU load.</p>
               </CardContent>
             </Card>
           </div>

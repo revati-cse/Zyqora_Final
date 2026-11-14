@@ -1,0 +1,36 @@
+# Organiser-defined classification profiles (Zyqora AI 4.0).
+#
+# The MobileNetV2 waste model has exactly two output classes, in index order:
+#   0 Organic, 1 Recyclable      (config/classes_waste.json)
+# They are the labels of the organiser-provided dataset (O_xxxx / R_xxxx images).
+# A profile only RENAMES those two model classes for display and counting. It cannot
+# add information the model does not have, so every mapping below is one-to-one and
+# the original model label is always stored and shown next to it.
+#
+# Items whose classification is not reliable (EcoGuard REVIEW) are shown as `unknown_label`
+# in every profile; their model label is still stored.
+schema_version: 1
+active: organiser
+
+profiles:
+  organiser:
+    title: "Organic / Recyclable (organiser dataset labels)"
+    description: "The exact labels of the organiser dataset and of the trained model."
+    labels: {Organic: Organic, Recyclable: Recyclable}
+    unknown_label: Unknown
+
+  recyclable:
+    title: "Recyclable / Non-Recyclable"
+    description: >-
+      Recyclable -> Recyclable, Organic -> Non-Recyclable. "Non-Recyclable" here means
+      "not for the dry-recycling stream"; organic waste can still be composted.
+    labels: {Organic: Non-Recyclable, Recyclable: Recyclable}
+    unknown_label: Unknown
+
+  food:
+    title: "Food / Waste"
+    description: >-
+      Organic -> Food, Recyclable -> Waste. The model's Organic class was trained on food
+      AND other biodegradable items (leaves, peels), so "Food" means "food / organic".
+    labels: {Organic: Food, Recyclable: Waste}
+    unknown_label: Unknown

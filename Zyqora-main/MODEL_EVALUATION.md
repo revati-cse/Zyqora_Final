@@ -118,3 +118,19 @@ python run_zyqora.py --profile waste_mobilenetv2 --images <TEST dir with O/ and 
 python run_zyqora.py --profile waste_mobilenetv2 --images <TEST dir> --labels-from-folders --dataset-role test --quiet --exclude-list outputs/leakage/test_overlap_files.txt --out outputs/test_waste_dedup
 ```
 `outputs/test_waste/summary.json` then holds overall accuracy, per-class precision/recall/F1, the confusion matrix, accepted-only accuracy and metrics, review rate, and incorrect accepted predictions. `results.csv` has one row per image. Do not change the threshold after looking at these results (`sweep_threshold.py` refuses `INDEPENDENT_TEST` results).
+
+## Zyqora AI 4.0: evaluations of the detector and the combined pipeline
+
+| Evaluation | Status |
+|---|---|
+| YOLO decoder parity vs Ultralytics (32 images, x86) | **Done**: 117/122 boxes matched at 640 px (mean IoU 0.985); `.pte` = `.onnx` boxes |
+| Detector held-out accuracy (generic objects), PASCAL VOC2007 test, 4,952 images | **Done** (x86; accuracy is device-independent). YOLO11n-640 mAP@0.5 **0.832**, mAP@0.5:0.95 **0.628**, P/R @0.25 0.680/0.859; bottle AP50 0.772, tv 0.831. Full table: DETECTION.md, `reports/detector_eval/` |
+| Detector accuracy on **waste** (box-annotated waste test set) | **BLOCKED**: TACO images not reachable from the build environment; no other annotated waste set available |
+| MobileNetV2 accuracy on **crops** | **Not measured**. The 0.95 EcoGuard threshold comes from whole-image validation; crops are a different distribution, so the threshold is not validated for crops |
+| Combined pipeline: per-object correctness, missed-detection rate, mixed-image success rate, unknown rate | **Not measured**: needs mixed-waste photos with per-object boxes and labels. `scripts/evaluate_detector.py --images/--labels` covers the detection part once such a set exists |
+| End-to-end latency | x86 host only (BENCHMARK_REPORT.md); Pi pending |
+
+Observed behaviour with the real models on the x86 host (examples, not statistics):
+- **Bottle + wine glass photo:** two separate items, both Recyclable (0.96 / 0.98); a dining table in the frame is ignored.
+- **Two TV photos:** detected as `tv` and routed to e-waste, while the classifier alone says Recyclable (up to 1.000). This is the Residual gap, now mitigated for objects the detector knows.
+- **An Organic validation photo:** nothing detected, so the whole-image fallback gives the same answer as single-item mode.

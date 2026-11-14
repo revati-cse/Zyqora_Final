@@ -19,3 +19,8 @@ pyyaml>=6.0
 fastapi>=0.115,<1
 uvicorn>=0.30,<1
 python-multipart>=0.0.9
+
+# Optional: ONNX Runtime detector profiles (yolo11n_*_onnx in config/detector.yaml).
+# The default detector runs on ExecuTorch and does not need it. Benchmark both on the Pi
+# (scripts/benchmark_detector.py) before switching.
+# onnxruntime>=1.20

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -128,3 +128,16 @@ class VerifyResponse(BaseModel):
 class VoicePlay(BaseModel):
     lang: str = Field(pattern=r"^(en|ta)$")
     key: str = Field(min_length=2, max_length=32)
+
+
+class GreenScoreComponents(BaseModel):
+    recycling_potential: float = Field(ge=0, le=100)
+    environmental_impact: float = Field(ge=0, le=100)
+    disposal_suitability: float = Field(ge=0, le=100)
+
+
+class GreenScoreRequest(BaseModel):
+    components: Optional[GreenScoreComponents] = None
+    material: Optional[str] = Field(None, max_length=40)
+    model_class: Optional[str] = Field(None, max_length=40)
+    decision: Literal["ACCEPT", "REVIEW"] = "ACCEPT"

@@ -62,7 +62,7 @@ function Brand() {
       </svg>
       <div className="leading-tight">
         <p className="text-sm font-semibold tracking-tight">Zyqora AI</p>
-        <p className="font-mono text-[10px] text-muted-foreground">edge waste sorting · 3.0</p>
+        <p className="font-mono text-[10px] text-muted-foreground">mixed-waste AI · 4.0</p>
       </div>
     </div>
   );

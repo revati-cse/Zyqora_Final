@@ -1,0 +1,36 @@
+# Material hints for a detector FINE-TUNED on TACO supercategories (scripts/prepare_taco.py).
+# Not used by the shipped build (the shipped detector is COCO-80). Point `materials:` in
+# config/detector.yaml here only after training and evaluating such a detector.
+# Unlike COCO, TACO labels describe litter, so several give a material directly.
+schema_version: 1
+version: materials-taco-1
+
+classes:
+  Aluminium foil:        {material: Metal, certainty: likely, food: false, expected_model_class: Recyclable, note: "clean foil only"}
+  Battery:               {material: E-Waste, certainty: likely, food: false, expected_model_class: null, special_stream: E_WASTE, note: "battery: hazardous, never household bins"}
+  Blister pack:          {material: Other, certainty: likely, food: false, expected_model_class: null, note: "plastic + aluminium laminate"}
+  Bottle:                {material: Unknown, certainty: unknown, food: false, expected_model_class: Recyclable, note: "plastic or glass"}
+  Bottle cap:            {material: Unknown, certainty: unknown, food: false, expected_model_class: Recyclable, note: "plastic or metal cap"}
+  Broken glass:          {material: Glass, certainty: likely, food: false, expected_model_class: Recyclable, note: "handling hazard"}
+  Can:                   {material: Metal, certainty: likely, food: false, expected_model_class: Recyclable, note: "aluminium or steel can"}
+  Carton:                {material: Cardboard, certainty: likely, food: false, expected_model_class: Recyclable, note: "drink cartons are multi-layer"}
+  Cigarette:             {material: Other, certainty: likely, food: false, expected_model_class: null, note: "residual waste"}
+  Cup:                   {material: Unknown, certainty: unknown, food: false, expected_model_class: null, note: "paper, plastic or foam cup"}
+  Food waste:            {material: Organic, certainty: likely, food: true, expected_model_class: Organic}
+  Glass jar:             {material: Glass, certainty: likely, food: false, expected_model_class: Recyclable}
+  Lid:                   {material: Unknown, certainty: unknown, food: false, expected_model_class: null, note: "plastic or metal lid"}
+  Other plastic:         {material: Plastic, certainty: likely, food: false, expected_model_class: Recyclable}
+  Paper:                 {material: Paper, certainty: likely, food: false, expected_model_class: Recyclable}
+  Paper bag:             {material: Paper, certainty: likely, food: false, expected_model_class: Recyclable}
+  Plastic bag & wrapper: {material: Plastic, certainty: likely, food: false, expected_model_class: Recyclable, note: "films are often not accepted"}
+  Plastic container:     {material: Plastic, certainty: likely, food: false, expected_model_class: Recyclable}
+  Plastic glooves:       {material: Plastic, certainty: likely, food: false, expected_model_class: null, note: "TACO's spelling; usually residual"}
+  Plastic utensils:      {material: Plastic, certainty: likely, food: false, expected_model_class: null}
+  Pop tab:               {material: Metal, certainty: likely, food: false, expected_model_class: Recyclable}
+  Rope & strings:        {material: Other, certainty: likely, food: false, expected_model_class: null}
+  Scrap metal:           {material: Metal, certainty: likely, food: false, expected_model_class: Recyclable}
+  Shoe:                  {material: Other, certainty: likely, food: false, expected_model_class: null}
+  Squeezable tube:       {material: Other, certainty: likely, food: false, expected_model_class: null, note: "plastic/aluminium laminate"}
+  Straw:                 {material: Plastic, certainty: likely, food: false, expected_model_class: null}
+  Styrofoam piece:       {material: Plastic, certainty: likely, food: false, expected_model_class: null, note: "polystyrene; rarely accepted"}
+  Unlabeled litter:      {material: Unknown, certainty: unknown, food: false, expected_model_class: null}

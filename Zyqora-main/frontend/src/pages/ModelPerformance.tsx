@@ -1,6 +1,7 @@
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { ErrorState, MetricCard, PageHeader, ScopeTag } from "@/components/common";
 import { ConfusionMatrix } from "@/components/common/ConfusionMatrix";
+import { DetectorEvalCard, DetectorLatencyCard, ModelComparison } from "@/components/detection/Comparison";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, Skeleton, Table, Td, Th } from "@/components/ui/misc";
 import { useModelMetrics, useModelStatus } from "@/hooks/useApi";
@@ -47,11 +48,18 @@ export default function ModelPerformance() {
 
   return (
     <>
-      <PageHeader title="Model Performance"
-        description="What runs, how it was evaluated, and what has not been measured yet. Each figure is tagged with its source; validation, TEST and live figures are never mixed." />
+      <PageHeader title="Model Comparison"
+        description="What runs, how it was evaluated, and what has not been measured yet. Each figure is tagged with its source; validation, TEST and live figures are never mixed, and detection metrics are kept apart from classification metrics." />
+
+      <div className="mb-6"><ModelComparison /></div>
+      <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <DetectorEvalCard />
+        <DetectorLatencyCard />
+      </div>
+      <h2 className="mb-3 mt-8 text-lg font-semibold tracking-tight">MobileNetV2 waste classifier</h2>
 
       <Card className="mb-6">
-        <CardHeader><CardTitle>Edge AI pipeline</CardTitle><CardDescription>Every live classification follows these steps on the device.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Single-item pipeline</CardTitle><CardDescription>Every single-item classification follows these steps on the device. In mixed-waste mode YOLO runs first and these steps run once per detected crop.</CardDescription></CardHeader>
         <CardContent>
           <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
             {STEPS.map(([title, text], i) => (

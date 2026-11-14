@@ -12,13 +12,13 @@ from typing import Optional
 from fastapi import FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .. import __version__
 from .schemas import (
-    BatchItemError, BatchResponse, Classification, CreateUser, ErrorBody, ErrorInfo, Health, HistoryPage,
-    VerifyRequest, VerifyResponse, VoicePlay,
+    BatchItemError, BatchResponse, Classification, CreateUser, ErrorBody, ErrorInfo, GreenScoreRequest, Health,
+    HistoryPage, VerifyRequest, VerifyResponse, VoicePlay,
 )
 from .service import ServiceError, ZyqoraService
 
@@ -55,7 +55,7 @@ def create_app(service: ZyqoraService, *, static_dir: Optional[Path] = None, cor
     app = FastAPI(title="Zyqora AI API", version=__version__, lifespan=lifespan,
                   description="Offline waste classification on Raspberry Pi 5 (ExecuTorch + XNNPACK).")
     if cors_origins:
-        app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_methods=["GET", "POST"],
+        app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_methods=["GET", "POST", "PUT", "DELETE"],
                            allow_headers=["Content-Type"], allow_credentials=False)
 
     @app.exception_handler(ServiceError)
@@ -94,6 +94,8 @@ def create_app(service: ZyqoraService, *, static_dir: Optional[Path] = None, cor
 
     # ---------------------------------------------------------------- inference
     @app.post("/api/inference", response_model=Classification, responses={413: ERRORS, 415: ERRORS, 422: ERRORS, 503: ERRORS})
+    @app.post("/api/classify", response_model=Classification, responses={413: ERRORS, 415: ERRORS, 422: ERRORS, 503: ERRORS},
+              summary="Classify one image (whole image, one item) - alias of /api/inference")
     async def inference(file: UploadFile = File(...), user_id: Optional[str] = Form(None),
                         batch_id: Optional[str] = Form(None), ground_truth: Optional[str] = Form(None),
                         source: str = Form("upload")):
@@ -176,12 +178,30 @@ def create_app(service: ZyqoraService, *, static_dir: Optional[Path] = None, cor
         it["image_url"] = f"/api/history/{item_id}/image" if it["has_thumbnail"] else None
         return it
 
+    @app.delete("/api/history/{item_id}")
+    def history_delete(item_id: int):
+        if not service.delete_classification(item_id):
+            raise ServiceError("NOT_FOUND", f"no classification {item_id}", 404)
+        return {"deleted": item_id}
+
     @app.get("/api/history/{item_id}/image")
     def history_image(item_id: int):
         p = service.thumbnail_path(item_id)
         if p is None:
             raise ServiceError("NOT_FOUND", "no stored image for this classification", 404)
         return FileResponse(p, media_type="image/jpeg", headers={"Cache-Control": "max-age=86400"})
+
+    @app.get("/api/analytics")
+    def analytics_all(days: Optional[int] = Query(None, ge=1, le=3650)):
+        cats = service.state.loaded.category_set.category_names if service.state.loaded else []
+        labels = service.mixed._labels()
+        date_from = None
+        if days:
+            from datetime import datetime, timedelta, timezone
+            date_from = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="milliseconds")
+        return {"classifications": service.store.summary(cats, date_from=date_from),
+                "detections": service.mixed.store.summary(labels, days=days) if labels else None,
+                "scope": "records stored by this device's API (real requests only)"}
 
     @app.get("/api/analytics/summary")
     def analytics(date_from: Optional[str] = None, date_to: Optional[str] = None, category: Optional[str] = None):
@@ -218,6 +238,10 @@ def create_app(service: ZyqoraService, *, static_dir: Optional[Path] = None, cor
         except GreenScoreError as exc:
             raise ServiceError("GREENSCORE_ERROR", str(exc), 409) from exc
         return {"user_id": body.user_id}
+
+    @app.get("/api/greenscore/rules")
+    def greenscore_rules():
+        return service.mixed.greenscore.describe()
 
     @app.get("/api/greenscore/{user_id}")
     def greenscore_user(user_id: str):
@@ -268,6 +292,131 @@ def create_app(service: ZyqoraService, *, static_dir: Optional[Path] = None, cor
     @app.post("/api/voice/play")
     def voice_play(body: VoicePlay):
         return service.play_on_device(body.lang, body.key)  # sync route: FastAPI runs it in a worker thread
+
+    # ---------------------------------------------------------------- Zyqora AI 4.0: mixed waste
+    @app.get("/api/models/status")
+    def models_status():
+        labels = service.mixed._labels()
+        return {"classifier": service.model_status(), "detector": service.mixed.status(),
+                "label_profiles": {"active": service.mixed.effective().get("label_profile") or (labels.active if labels else None),
+                                   "profiles": [p.as_dict() for p in labels.profiles.values()] if labels else []},
+                "greenscore_rules": {"version": service.mixed.greenscore.version} if service.mixed.det_cfg else None,
+                "pipeline": {"ready": bool(service.state.ready and service.mixed.detector is not None),
+                             "stages": ["YOLO detection", "crop", "MobileNetV2 classification", "organiser label mapping",
+                                        "disposal rules", "Green Score"]}}
+
+    @app.post("/api/models/reload")
+    def models_reload():
+        service.load_model()
+        return models_status()
+
+    @app.post("/api/detect", responses={413: ERRORS, 415: ERRORS, 422: ERRORS, 503: ERRORS})
+    async def detect(file: UploadFile = File(...), user_id: Optional[str] = Form(None), source: str = Form("upload"),
+                     persist: bool = Form(True)):
+        from starlette.concurrency import run_in_threadpool
+
+        data = await _read_upload(service, file)
+        src = source if source in ("upload", "browser-camera", "camera-frame") else "upload"
+        return await run_in_threadpool(service.mixed.analyze_bytes, data, file.filename or "upload", source=src,
+                                       user_id=user_id or None, persist=persist)
+
+    @app.post("/api/greenscore", summary="Compute a Green Score (no image) from a material/class or explicit components")
+    def greenscore_compute(body: GreenScoreRequest):
+        eng = service.mixed.greenscore
+        if body.components is not None:
+            c = body.components
+            res = eng.score_components(c.recycling_potential, c.environmental_impact, c.disposal_suitability)
+        else:
+            if not body.material and not body.model_class:
+                raise ServiceError("VALIDATION_ERROR", "give components, material or model_class", 422)
+            res = eng.score_item(material=body.material, material_certainty="likely" if body.material else None,
+                                 model_class=body.model_class, decision=body.decision, waste_item=True)
+        return res.as_dict()
+
+    @app.get("/api/detections")
+    def detections(limit: int = Query(50, ge=1, le=500), offset: int = Query(0, ge=0), q: Optional[str] = Query(None, max_length=80),
+                   material: Optional[str] = None, model_label: Optional[str] = None, has_review: bool = False,
+                   min_score: Optional[float] = Query(None, ge=0, le=100), date_from: Optional[str] = None,
+                   date_to: Optional[str] = None):
+        items, total = service.mixed.store.list(limit=limit, offset=offset, q=q, material=material, model_label=model_label,
+                                                has_review=has_review, min_score=min_score, date_from=date_from,
+                                                date_to=date_to)
+        return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+    @app.get("/api/detections/export.csv")
+    def detections_csv(q: Optional[str] = Query(None, max_length=80), material: Optional[str] = None,
+                       date_from: Optional[str] = None, date_to: Optional[str] = None):
+        text = service.mixed.store.export_csv(q=q, material=material, date_from=date_from, date_to=date_to)
+        return PlainTextResponse(text, media_type="text/csv",
+                                 headers={"Content-Disposition": 'attachment; filename="zyqora_detections.csv"'})
+
+    @app.get("/api/detections/{det_id}")
+    def detection(det_id: int):
+        r = service.mixed.store.get(det_id)
+        if not r:
+            raise ServiceError("NOT_FOUND", f"no detection {det_id}", 404)
+        return r
+
+    @app.delete("/api/detections/{det_id}")
+    def detection_delete(det_id: int):
+        if not service.mixed.store.delete(det_id):
+            raise ServiceError("NOT_FOUND", f"no detection {det_id}", 404)
+        return {"deleted": det_id}
+
+    @app.get("/api/detections/{det_id}/image")
+    def detection_image(det_id: int):
+        p = service.mixed.store.image_file(det_id)
+        if p is None:
+            raise ServiceError("NOT_FOUND", "no stored image for this detection", 404)
+        return FileResponse(p, media_type="image/jpeg", headers={"Cache-Control": "max-age=86400"})
+
+    @app.get("/api/detections/{det_id}/annotated.jpg")
+    def detection_annotated(det_id: int):
+        data = service.mixed.annotated(det_id)
+        if data is None:
+            raise ServiceError("NOT_FOUND", "no stored image for this detection", 404)
+        return Response(data, media_type="image/jpeg",
+                        headers={"Content-Disposition": f'inline; filename="zyqora_detection_{det_id}.jpg"'})
+
+    @app.get("/api/system/metrics")
+    def system_metrics():
+        snap = service.mixed.sample_metrics("poll")
+        lm = service.state.loaded
+        snap.update({"model_ready": service.state.ready, "model_profile": service.state.profile,
+                     "model_load_ms": service.state.load_ms, "detector_ready": service.mixed.detector is not None,
+                     "detector_profile": service.mixed.detector.profile.name if service.mixed.detector else None,
+                     "detector_load_ms": service.mixed.detector.load_ms if service.mixed.detector else None,
+                     "detector_runtime": service.mixed.detector.runner.backend if service.mixed.detector else None,
+                     "runtime": "ExecuTorch" if service.state.ready else None,
+                     "backend": "XNNPACK" if lm and "XnnpackBackend" in lm.classifier.registered_backends else None,
+                     "threads": lm.classifier.thread_count if lm else None, "last_inference_ms": service.last_inference_ms,
+                     "camera": service.camera_status(), "backend_status": "ok",
+                     "sorter": {"name": service.sorter.name, "hardware": bool(service.sorter.hardware)},
+                     "power_note": "measured_power_watts is only filled from an external meter; pmic.rails_watts is the "
+                                   "Pi 5 PMIC's own rail measurement (excludes USB/peripherals)."})
+        return snap
+
+    @app.get("/api/system/history")
+    def system_history(days: Optional[int] = Query(1, ge=1, le=3650)):
+        labels = service.mixed._labels()
+        s = service.mixed.store.summary(labels, days=days) if labels else {"system_metrics": []}
+        return {"samples": s["system_metrics"]}
+
+    @app.get("/api/benchmarks")
+    def benchmarks():
+        return service.mixed.benchmarks()
+
+    @app.get("/api/settings")
+    def get_settings():
+        return service.mixed.settings_payload()
+
+    @app.put("/api/settings")
+    def put_settings(body: dict):
+        return service.mixed.update_settings(body)
+
+    @app.post("/api/settings/purge")
+    def purge(days: int = Query(..., ge=1, le=3650)):
+        return service.mixed.store.purge_older_than(days)
 
     @app.get("/api/{rest:path}", include_in_schema=False)
     def api_404(rest: str):

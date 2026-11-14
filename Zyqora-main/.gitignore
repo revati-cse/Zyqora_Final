@@ -16,6 +16,11 @@ models/*
 # Its sidecar .json holds the SHA-256 written by scripts/verify_waste_model.py.
 !models/mobilenetv2_waste_fp32_xnnpack.pte
 !models/mobilenetv2_waste_fp32_xnnpack.json
+# Zyqora AI 4.0 detector (pretrained YOLO11n COCO, AGPL-3.0 weights; ~10 MiB each), pinned in config/detector.yaml
+!models/yolo11n_640_xnnpack.pte
+!models/yolo11n_320_xnnpack.pte
+!models/yolo11n_640.onnx
+!models/yolo11n_320.onnx
 
 # Data: organiser/dev images are not committed; only READMEs and label templates
 data/**/*.jpg

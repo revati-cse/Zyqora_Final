@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { PageHeader } from "@/components/common";
+import { DetectionSettingsCard } from "@/components/detection/DetectionSettingsCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label, Select } from "@/components/ui/input";
@@ -41,7 +42,7 @@ export default function Settings() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Preferences are stored in this browser. Model and EcoGuard settings live on the device (config/models.yaml) and are shown read-only." />
+      <PageHeader title="Settings" description="Dashboard preferences are stored in this browser. Detection settings are stored on the device. Model and EcoGuard settings live in config/models.yaml and are shown read-only." />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Dashboard</CardTitle></CardHeader>
@@ -64,7 +65,7 @@ export default function Settings() {
                 <input type="checkbox" className="size-4 accent-[var(--primary)]" {...form.register("visual3d")} />
                 3D illustration on Overview (automatically off in the Pi's own browser and with reduced motion)
               </label>
-              <div><Label htmlFor="s-user">GreenScore participant for new classifications</Label>
+              <div><Label htmlFor="s-user">Green Points participant for new classifications</Label>
                 <Input id="s-user" placeholder="empty = do not record events" {...form.register("userId")} aria-invalid={!!err.userId} />
                 {err.userId && <p className="mt-1 text-xs text-danger">{err.userId.message}</p>}</div>
               <div><Label htmlFor="s-api">API address</Label>
@@ -101,6 +102,7 @@ export default function Settings() {
             <Alert>Reload after copying a new .pte into models/. To change the model profile or threshold, edit config/models.yaml on the device and restart the server.</Alert>
           </CardContent>
         </Card>
+        <div className="lg:col-span-2"><DetectionSettingsCard /></div>
       </div>
     </>
   );

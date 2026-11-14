@@ -74,7 +74,8 @@ profiles:
         lib = fake_portable_lib(module)
         base = dict(models_config=self.models, db_path=self.d / "web.sqlite3", thumbs_dir=self.d / "thumbs",
                     greenscore_db=self.d / "gs.sqlite3", hardware_config=self.d / "none.yaml",
-                    test_summary=self.d / "none.json", benchmark_dir=self.d, portable_lib=lib)
+                    test_summary=self.d / "none.json", benchmark_dir=self.d, portable_lib=lib,
+                    enable_detector=False)
         base.update(kw)
         return ServiceSettings(**base)
 

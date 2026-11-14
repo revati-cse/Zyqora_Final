@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import numpy as np
 from PIL import Image
@@ -75,6 +75,11 @@ class ServiceSettings:
     test_summary: Path = OUTPUTS_DIR / "test_waste" / "summary.json"
     benchmark_dir: Path = OUTPUTS_DIR / "benchmark"
     portable_lib: Optional[ModuleType] = None  # test injection only
+    # Zyqora AI 4.0 mixed-waste detection
+    enable_detector: bool = True
+    detector_config: Optional[Path] = None   # default config/detector.yaml
+    detections_dir: Optional[Path] = None    # default outputs/web/detections
+    detector_runner_factory: Optional[Callable] = None  # test injection only
 
 
 @dataclass
@@ -112,6 +117,17 @@ class ZyqoraService:
         self._greenscore = None
         self.started_at = now_iso()
         self.last_inference_ms: Optional[float] = None
+        from .mixed_service import MixedService, MixedSettings
+
+        ms = MixedSettings()
+        if self.settings.detector_config:
+            ms.detector_config = Path(self.settings.detector_config)
+        ms.images_dir = Path(self.settings.detections_dir) if self.settings.detections_dir else \
+            Path(self.settings.db_path).parent / "detections"
+        ms.store_images = self.settings.store_thumbnails
+        self.mixed = MixedService(self, ms, runner_factory=self.settings.detector_runner_factory)
+        if not self.settings.enable_detector:
+            self.mixed.code, self.mixed.message = "DETECTOR_DISABLED", "detector disabled (--no-detector)"
 
     # ------------------------------------------------------------------ model
     def load_model(self) -> ModelState:
@@ -156,6 +172,8 @@ class ZyqoraService:
         if not st.ready:
             log.error("model unavailable [%s]: %s", st.code, st.message)
         self.state = st
+        if self.settings.enable_detector:
+            self.mixed.load()
         return st
 
     def require_model(self) -> LoadedModel:
@@ -321,6 +339,16 @@ class ZyqoraService:
         except OSError as exc:
             log.warning("thumbnail not saved for %s: %s", item_id, exc)
             return False
+
+    def delete_classification(self, item_id: int) -> bool:
+        if not self.store.delete(item_id):
+            return False
+        p = self.settings.thumbs_dir / f"{int(item_id)}.jpg"
+        try:
+            p.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return True
 
     def thumbnail_path(self, item_id: int) -> Optional[Path]:
         p = self.settings.thumbs_dir / f"{int(item_id)}.jpg"

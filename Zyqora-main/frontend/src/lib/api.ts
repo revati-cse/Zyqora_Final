@@ -12,6 +12,10 @@ import type {
   VerifyResult,
   VoiceMessages,
 } from "@/types/api";
+import type {
+  Benchmarks, CombinedAnalytics, DetectionPage, DetectionResult, DetectionSettingsPayload, GreenScore, GreenScoreRules,
+  ModelsStatus, SystemMetrics, SystemSample,
+} from "@/types/mixed";
 
 /** Error carrying the backend's stable error code (e.g. MODEL_NOT_FOUND). */
 export class ApiError extends Error {
@@ -71,7 +75,44 @@ export interface ClassifyOptions {
   signal?: AbortSignal;
 }
 
+export interface DetectionFilters {
+  limit?: number; offset?: number; q?: string; material?: string; model_label?: string; has_review?: boolean;
+  min_score?: number; date_from?: string; date_to?: string;
+}
+
+const json = (method: string, body: unknown): RequestInit => ({
+  method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+});
+
 export const api = {
+  // ---- Zyqora AI 4.0: mixed-waste detection
+  modelsStatus: () => request<ModelsStatus>("/api/models/status"),
+  reloadModels: () => request<ModelsStatus>("/api/models/reload", { method: "POST" }),
+  detect: (file: Blob, filename: string, o: { userId?: string; source?: "upload" | "browser-camera" | "camera-frame"; signal?: AbortSignal;
+    persist?: boolean } = {}) => {
+    const fd = new FormData();
+    fd.append("file", file, filename);
+    if (o.userId) fd.append("user_id", o.userId);
+    fd.append("source", o.source ?? "upload");
+    if (o.persist === false) fd.append("persist", "false");
+    return request<DetectionResult>("/api/detect", { method: "POST", body: fd, signal: o.signal });
+  },
+  detections: (p: DetectionFilters) => request<DetectionPage>(`/api/detections${qs({ ...p, has_review: p.has_review ? "true" : undefined })}`),
+  detection: (id: number) => request<DetectionResult>(`/api/detections/${id}`),
+  deleteDetection: (id: number) => request<{ deleted: number }>(`/api/detections/${id}`, { method: "DELETE" }),
+  detectionsCsvUrl: (p: DetectionFilters = {}) => apiUrl(`/api/detections/export.csv${qs({ q: p.q, material: p.material, date_from: p.date_from, date_to: p.date_to })}`),
+  greenscoreCompute: (body: { components?: { recycling_potential: number; environmental_impact: number; disposal_suitability: number };
+    material?: string; model_class?: string; decision?: "ACCEPT" | "REVIEW" }) => request<GreenScore>("/api/greenscore", json("POST", body)),
+  greenscoreRules: () => request<GreenScoreRules>("/api/greenscore/rules"),
+  analyticsAll: (days?: number) => request<CombinedAnalytics>(`/api/analytics${qs({ days })}`),
+  systemMetrics: () => request<SystemMetrics>("/api/system/metrics"),
+  systemHistory: (days = 1) => request<{ samples: SystemSample[] }>(`/api/system/history${qs({ days })}`),
+  benchmarks: () => request<Benchmarks>("/api/benchmarks"),
+  getSettings: () => request<DetectionSettingsPayload>("/api/settings"),
+  putSettings: (values: Record<string, unknown>) => request<DetectionSettingsPayload>("/api/settings", json("PUT", values)),
+  deleteClassification: (id: number) => request<{ deleted: number }>(`/api/history/${id}`, { method: "DELETE" }),
+
+  // ---- single-item classification (3.0)
   health: () => request<Health>("/api/health"),
   modelStatus: () => request<ModelStatus>("/api/model/status"),
   reloadModel: () => request<ModelStatus>("/api/model/reload", { method: "POST" }),

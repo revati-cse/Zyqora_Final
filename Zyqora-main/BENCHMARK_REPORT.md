@@ -86,3 +86,30 @@ Decision: **2 threads** (`config/app.yaml → model.num_threads: 2`). It nearly 
 | Process memory (RSS / peak) | 384 / 384 MB |
 
 Still to measure on the Pi: dashboard HTTP latency and camera-to-result latency (`zyqora_station.py --camera auto --auto 30`). CPU temperature under load is optional.
+
+## Zyqora AI 4.0: detector and mixed-waste pipeline
+
+### How to measure on the Pi (not yet run)
+```bash
+python scripts/benchmark_detector.py --threads 2 4 --images data/validation --max-images 50 --pipeline
+```
+Each (profile, threads) runs in a fresh process. The script records load + warm-up, model-only forward() latency (median / p95), `detect()` latency (letterbox + forward + decode + NMS), CPU ms per forward, throughput, process RSS / peak, and temperature. With `--pipeline` it also records the full YOLO + MobileNetV2 analysis per image. Results go to `reports/benchmarks/pi5_detector_<profile>.json` and appear on the **Model Comparison** page, labelled "Raspberry Pi 5". **No wattage is estimated.** On the Pi, System Monitoring shows the PMIC rail readings (`vcgencmd pmic_read_adc`); these exclude USB devices and conversion losses, so they are not wall power. Measured power needs an inline USB-C meter.
+
+### Development-host results (x86_64 VM, 4 vCPU Xeon 2.1 GHz, 2026-11-14), **NOT Pi**
+From `reports/benchmarks/x86_64_detector_*.json`. Pipeline = 40 Open Images validation photos (mean 1.1 classified crops per image), with the waste classifier on ExecuTorch.
+
+| Profile | Runtime | Thr | Load+warm-up | Forward median | p95 | detect() median | CPU ms/fwd | fwd/s | Peak RSS (detector only) | Pipeline median | MobileNetV2 per crop | Images/s | Peak RSS (pipeline) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| yolo11n_640 | ExecuTorch/XNNPACK | 2 | 130 ms | 63.7 ms | 78.0 | 67.8 | 121.2 | 15.7 | 779 MB | 78.3 ms | 8.6 ms | 10.1 | 802 MB |
+| yolo11n_640 | ExecuTorch/XNNPACK | 4 | 114 ms | 39.7 ms | 44.1 | 49.3 | 112.5 | 25.1 | 779 MB | 54.9 ms | 6.5 ms | 15.6 | 802 MB |
+| yolo11n_640_onnx | ONNX Runtime | 2 | 153 ms | 39.9 ms | 46.7 | 53.0 | 80.1 | 24.8 | 201 MB | 63.3 ms | 9.3 ms | 13.2 | 867 MB |
+| yolo11n_640_onnx | ONNX Runtime | 4 | 168 ms | 29.3 ms | 38.1 | 45.6 | 120.5 | 32.9 | 201 MB | 46.8 ms | 9.7 ms | 17.7 | 867 MB |
+| yolo11n_320 | ExecuTorch/XNNPACK | 2 | 52 ms | 14.5 ms | 19.9 | 18.4 | 37.3 | 64.0 | 728 MB | 29.1 ms | 8.6 ms | 25.9 | 754 MB |
+| yolo11n_320 | ExecuTorch/XNNPACK | 4 | 50 ms | 12.3 ms | 16.4 | 14.6 | 40.7 | 78.0 | 728 MB | 21.8 ms | 6.5 ms | 32.4 | 754 MB |
+| yolo11n_320_onnx | ONNX Runtime | 2 | 137 ms | 10.4 ms | 14.8 | 14.3 | 21.9 | 88.7 | 131 MB | 23.1 ms | 7.7 ms | 31.6 | 801 MB |
+| yolo11n_320_onnx | ONNX Runtime | 4 | 103 ms | 7.1 ms | 7.6 | 11.5 | 28.1 | 141.8 | 131 MB | 21.8 ms | 8.5 ms | 32.0 | 802 MB |
+
+What this does and does not show:
+- **On this x86 host, ONNX Runtime is faster than ExecuTorch/XNNPACK for YOLO.** XNNPACK is tuned for Arm, so the ranking on the Pi may differ. Measure on the Pi before switching the default (`detector_profile` in Settings).
+- The ExecuTorch detector process is about 730–780 MB because the ExecuTorch Python bindings import torch. The ONNX detector alone is 131–201 MB, but the full pipeline still loads torch for the classifier.
+- Per-image pipeline latency grows by roughly one MobileNetV2 run (about 7–10 ms here) per waste object.

@@ -1,0 +1,78 @@
+# Green Score rules (Zyqora AI 4.0) - a PROJECT-DEFINED indicator, not a certified
+# environmental or lifecycle assessment (LCA). See GREEN_SCORE.md.
+#
+#   Green Score = recycling_potential x 0.40 + environmental_impact x 0.35 + disposal_suitability x 0.25
+#
+# Each component is a 0-100 ORDINAL RATING chosen by the team from the qualitative
+# reasoning written next to it. None of them is a measurement, and none of them uses the
+# model's confidence. Higher = more favourable:
+#   recycling_potential   how much of the material can realistically be recovered
+#                         (recycled or composted) if it reaches the right stream
+#   environmental_impact  how favourable the environmental outcome of handling it is
+#                         (100 = low harm; low values = hazardous, persistent or hard to process)
+#   disposal_suitability  how specific and widely available the recommended stream is
+#
+# Items are scored ONLY when the system's decision is reliable (EcoGuard ACCEPT and no
+# detector/classifier conflict). Unknown, conflicting and non-waste items get no score;
+# the image score is the mean over scored items and always reports its coverage.
+schema_version: 1
+version: gs-rules-1
+
+weights:
+  recycling_potential: 0.40
+  environmental_impact: 0.35
+  disposal_suitability: 0.25
+
+bands:                      # project-defined, inclusive lower bounds
+  - {min: 80, label: "High sustainability potential"}
+  - {min: 60, label: "Moderate-to-high potential"}
+  - {min: 40, label: "Moderate potential"}
+  - {min: 20, label: "Low potential"}
+  - {min: 0,  label: "Very low potential"}
+
+# Ratings by material (used when the detector gives a likely material).
+materials:
+  Metal:
+    recycling_potential:  {value: 95, why: "Aluminium and steel can be remelted repeatedly with little loss of quality."}
+    environmental_impact: {value: 80, why: "Recycled metal replaces energy-intensive primary production; sharp or coated items need care."}
+    disposal_suitability: {value: 85, why: "Metal is accepted by most dry-waste and scrap collection."}
+  Glass:
+    recycling_potential:  {value: 85, why: "Container glass can be remelted repeatedly; drinking/window glass usually cannot be mixed in."}
+    environmental_impact: {value: 70, why: "Inert in landfill but heavy to transport; remelting needs high temperatures."}
+    disposal_suitability: {value: 75, why: "Glass collection exists in many but not all areas; broken glass is a handling hazard."}
+  Paper:
+    recycling_potential:  {value: 80, why: "Clean, dry paper is widely recycled; fibres shorten after several cycles."}
+    environmental_impact: {value: 70, why: "Biodegradable, but wet or food-soiled paper contaminates recycling."}
+    disposal_suitability: {value: 85, why: "Paper is accepted by most dry-waste collection when clean and dry."}
+  Cardboard:
+    recycling_potential:  {value: 85, why: "Clean corrugated cardboard is one of the most recycled materials."}
+    environmental_impact: {value: 70, why: "Biodegradable; greasy (e.g. pizza) boxes contaminate the stream."}
+    disposal_suitability: {value: 85, why: "Accepted by most dry-waste collection when flattened, clean and dry."}
+  Organic:
+    recycling_potential:  {value: 85, why: "Food and garden waste can be composted or digested when collected separately."}
+    environmental_impact: {value: 75, why: "Composting avoids landfill decomposition; outcome depends on the composting process."}
+    disposal_suitability: {value: 90, why: "Wet/organic collection or home composting is widely available."}
+  Plastic:
+    recycling_potential:  {value: 50, why: "Depends on the polymer: PET/HDPE bottles are often recycled; films and multi-layer packs mostly are not."}
+    environmental_impact: {value: 35, why: "Persistent in the environment; recycling usually downcycles."}
+    disposal_suitability: {value: 60, why: "Acceptance varies by polymer and municipality; check local rules."}
+  E-Waste:
+    recycling_potential:  {value: 60, why: "Metals can be recovered, but only by authorised e-waste recyclers."}
+    environmental_impact: {value: 30, why: "Batteries and electronics contain hazardous substances if mishandled."}
+    disposal_suitability: {value: 70, why: "Needs a designated e-waste collection point, not household bins."}
+  Other:
+    recycling_potential:  {value: 20, why: "Mixed or composite items (textiles, mixed materials) are rarely recycled by household collection."}
+    environmental_impact: {value: 30, why: "Usually ends up in landfill or incineration."}
+    disposal_suitability: {value: 40, why: "Needs special collection (e.g. textile donation) or residual waste."}
+
+# Ratings by waste-model class, used when the material is NOT known
+# (e.g. the detector saw a "bottle", or no detector label at all).
+model_classes:
+  Recyclable:
+    recycling_potential:  {value: 65, why: "Classified as recyclable, but the material is unconfirmed, so recovery is uncertain."}
+    environmental_impact: {value: 55, why: "Unknown material: could be easily recycled metal or persistent plastic."}
+    disposal_suitability: {value: 60, why: "Dry-recycling stream, but acceptance depends on the actual material."}
+  Organic:
+    recycling_potential:  {value: 80, why: "Classified as organic: compostable if it really is biodegradable."}
+    environmental_impact: {value: 70, why: "Composting avoids landfill; the material is unconfirmed."}
+    disposal_suitability: {value: 80, why: "Wet/organic collection, assuming no packaging is mixed in."}

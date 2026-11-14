@@ -296,3 +296,47 @@ Expect `waste_mobilenetv2`, `[1, 2]`, Organic/Recyclable, and the Mac SHA-256.
 | `API only` note at startup / blank page | `frontend/dist` is missing; build it (above). |
 | Laptop can't connect | Same network? Is a firewall enabled (`sudo ufw allow 8000/tcp`)? Did you start with `--host 0.0.0.0`? The start script does. |
 | Slow first request after boot | Importing torch + ExecuTorch takes several seconds; the `MODEL READY` pill turns green when loading is done. |
+
+## 17. Zyqora AI 4.0 (mixed-waste detection) on the Pi
+
+**Update** (on the Pi, in `~/Zyqora_Final/Zyqora-main`). Stop the server first with Ctrl+C or `sudo systemctl stop zyqora`.
+
+```bash
+git fetch origin && git switch claude/compassionate-mccarthy-6ec5a6 && git pull
+```
+```bash
+source .venv/bin/activate && pip install -r requirements-pi.txt
+```
+```bash
+(cd frontend && npm ci && npm run build)
+```
+```bash
+bash scripts/start_pi_demo.sh
+```
+
+No new Python package is needed: the default detector (`yolo11n_640`) runs on the ExecuTorch already installed. The detector files come with `git pull`, about 10 MiB each in `models/`. The server checks their SHA-256 against `config/detector.yaml`, and the database migrates itself on start-up.
+
+**Check that both models are loaded:**
+```bash
+curl -s http://127.0.0.1:8000/api/models/status | python3 -m json.tool | grep -E '"ready"|"profile"|"backend"|"load_ms"'
+```
+
+**Measure the Pi** (this fills the Model Comparison page with Pi numbers). Run it with the server stopped, so the two do not compete for CPU:
+```bash
+python scripts/benchmark_detector.py --threads 2 4 --images data/validation --max-images 50 --pipeline
+```
+Then commit the new `reports/benchmarks/pi5_detector_*.json` files.
+
+If ONNX Runtime is faster on the Pi, install it and choose `yolo11n_640_onnx` in Settings:
+```bash
+pip install onnxruntime
+```
+
+**Power.** System Monitoring shows the PMIC rail readings from `vcgencmd pmic_read_adc`. These are not wall power; for real power use a USB-C inline meter.
+
+| Symptom | Fix |
+|---|---|
+| `DETECTOR UNAVAILABLE · DETECTOR_NOT_FOUND` | `models/yolo11n_640_xnnpack.pte` is missing: run `git pull` (the files are normal git files, no Git LFS) |
+| `DETECTOR_HASH_MISMATCH` | The file differs from the pinned one (partial copy?); `git checkout -- models/` |
+| Analyses slow with many objects | Lower **Settings → Max crops classified**, or choose the `yolo11n_320` detector |
+| Camera page says it needs a secure page | Open the dashboard on the Pi itself (http://localhost:8000), or use AI Detection with a photo |

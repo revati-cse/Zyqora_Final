@@ -1,6 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Link, Route, Routes } from "react-router";
+import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router";
 import { EmptyState } from "@/components/common";
 import { AppShell } from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui/misc";
@@ -17,6 +17,10 @@ const ModelPerformance = lazy(() => import("@/pages/ModelPerformance"));
 const Device = lazy(() => import("@/pages/Device"));
 const History = lazy(() => import("@/pages/History"));
 const Settings = lazy(() => import("@/pages/Settings"));
+const Detect = lazy(() => import("@/pages/Detect"));
+const Camera = lazy(() => import("@/pages/Camera"));
+const GreenScoreEnv = lazy(() => import("@/pages/GreenScoreEnv"));
+const Showcase = lazy(() => import("@/pages/Showcase"));
 
 function NotFound() {
   return <EmptyState title="Page not found"><Link className="underline" to="/">Back to overview</Link></EmptyState>;
@@ -31,7 +35,12 @@ export function AppRoutes() {
           <Route path="/classify" element={<Live />} />
           <Route path="/batch" element={<Batch />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/greenscore" element={<GreenScore />} />
+          <Route path="/detect" element={<Detect />} />
+          <Route path="/camera" element={<Camera />} />
+          <Route path="/green-score" element={<GreenScoreEnv />} />
+          <Route path="/rewards" element={<GreenScore />} />
+          <Route path="/greenscore" element={<Navigate to="/rewards" replace />} />
+          <Route path="/showcase" element={<Showcase />} />
           <Route path="/model" element={<ModelPerformance />} />
           <Route path="/device" element={<Device />} />
           <Route path="/history" element={<History />} />

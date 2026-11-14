@@ -4,6 +4,7 @@
     python serve_zyqora.py                                  # http://127.0.0.1:8000 (this machine only)
     python serve_zyqora.py --host 0.0.0.0 --port 8000       # reachable from laptops on the local network
     python serve_zyqora.py --profile waste_mobilenetv2      # force the trained 2-class model
+    python serve_zyqora.py --no-detector                    # single-item classification only (no YOLO)
 
 The dashboard is served from frontend/dist (build it with `npm run build` in frontend/).
 There is no authentication: only expose it on a trusted local network.
@@ -39,6 +40,8 @@ def main(argv=None) -> int:
                     help="model profiles file (advanced: e.g. a dev copy pointing at another .pte)")
     ap.add_argument("--no-thumbnails", action="store_true", help="do not store image thumbnails in history")
     ap.add_argument("--max-upload-mb", type=int, default=10)
+    ap.add_argument("--no-detector", action="store_true", help="do not load the YOLO detector (mixed-waste mode off)")
+    ap.add_argument("--detector-config", type=Path, default=ROOT / "config" / "detector.yaml")
     ap.add_argument("--log-level", default="info")
     args = ap.parse_args(argv)
 
@@ -48,9 +51,11 @@ def main(argv=None) -> int:
     from zyqora.api.service import ServiceSettings, ZyqoraService
 
     setup_logging(OUTPUTS_DIR / "web" / "server.log")
-    settings = ServiceSettings(profile=args.profile, models_config=args.models_config, allow_fallback=args.allow_fallback, num_threads=args.threads,
+    settings = ServiceSettings(profile=args.profile, models_config=args.models_config, allow_fallback=args.allow_fallback,
+                               num_threads=args.threads,
                                camera=args.camera, enable_actuator=args.enable_actuator,
-                               store_thumbnails=not args.no_thumbnails, max_upload_bytes=args.max_upload_mb * 1048576)
+                               store_thumbnails=not args.no_thumbnails, max_upload_bytes=args.max_upload_mb * 1048576,
+                               enable_detector=not args.no_detector, detector_config=args.detector_config)
     service = ZyqoraService(settings)
     origins = args.cors_origin or [o.strip() for o in os.environ.get("ZYQORA_CORS_ORIGINS", "").split(",") if o.strip()]
     app = create_app(service, static_dir=args.static_dir, cors_origins=origins)

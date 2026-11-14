@@ -1,14 +1,49 @@
-# Zyqora AI
+# Zyqora AI 4.0
 
-**Offline, confidence-aware waste sorting assistant with bilingual guidance and verified sorting rewards.**
+**Offline mixed-waste detection, segregation guidance and Green Score on a Raspberry Pi 5.**
 NAMMA AI hackathon, PS3 (AI for Sustainability: Edge-Based Waste Sorting). Target: Raspberry Pi 5, ExecuTorch, XNNPACK, fully offline.
 
-> **Status in short** (details in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)):
-> - **Zyqora AI 3.0** adds a web dashboard (React) on a FastAPI backend that runs the real ExecuTorch pipeline. Open it from a laptop browser; the model runs on the Pi.
-> - The team's fine-tuned **Organic / Recyclable MobileNetV2** is integrated as the `waste_mobilenetv2` profile. The full stack (browser → API → ExecuTorch → EcoGuard → result) was tested end-to-end with a **stand-in model of the same architecture on an x86 host**, not with the real `.pte` and not on the Pi.
-> - **On the Raspberry Pi 5 (2026-11-14):** the trained model is verified and active (SHA-256 pinned). It reproduces the validation result (**96.60%** vs 96.65% reported, same 2,000 validation images) and runs at **12.7 ms median inference with 2 threads** (BENCHMARK_REPORT.md).
-> - Still **pending**: the dashboard on the Pi, the independent TEST-set evaluation, parity with the real checkpoint, and physical camera, speaker and actuator tests. No such numbers are claimed here.
-> - The waste model **cannot recognise Residual waste** (see [MODEL_EVALUATION.md](MODEL_EVALUATION.md)).
+> **Status in short** (details and the BLOCKED / UNVERIFIED list in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)):
+> - **4.0 adds mixed-waste analysis.** YOLO11n finds every object, and the team's MobileNetV2 (Organic / Recyclable) classifies each crop. Organiser label profiles, disposal rules and a transparent **Green Score** are then applied. Results go to SQLite and a React dashboard with 13 pages. See [ARCHITECTURE.md](ARCHITECTURE.md).
+> - **The detector is the pretrained COCO YOLO11n, not a waste-trained detector.** It was chosen by measured held-out accuracy: VOC2007 test mAP@0.5 0.832, vs 0.813 for YOLOv8n ([DETECTION.md](DETECTION.md)). Its labels are used only as material hints. Waste-detection mAP and end-to-end mixed-waste accuracy are **not measured**: no box-annotated waste test set was available.
+> - **Measured on the Raspberry Pi 5:** the classifier reproduces validation (**96.60%** vs 96.65% reported) at **12.7 ms median** with 2 threads.
+> - **Measured on an x86 development host only:** detector and full-pipeline latency ([BENCHMARK_REPORT.md](BENCHMARK_REPORT.md)). Pi detector benchmarks are pending.
+> - **Windows** scripts are provided (`setup_windows.ps1`, `start_all.ps1`) but **unverified on Windows** ([WINDOWS_SETUP.md](WINDOWS_SETUP.md)).
+> - The classifier **cannot recognise Residual waste**. Electronics recognised by the detector are routed to e-waste ([MODEL_EVALUATION.md](MODEL_EVALUATION.md)).
+
+## Zyqora AI 4.0 in one picture
+
+```
+photo ─► YOLO11n (ExecuTorch XNNPACK) ─► boxes ─► crop ─► MobileNetV2 waste .pte + EcoGuard
+      ─► organiser label (profile) ─► disposal stream (rules) ─► Green Score (0.40·RP + 0.35·EI + 0.25·DS)
+      ─► SQLite ─► dashboard: AI Detection · Live Camera · Green Score · Analytics · Model Comparison · History · Monitoring · Showcase
+```
+Unreliable items (low confidence, or detector/classifier disagreement) are shown as **Unknown** and are not scored. Mixed-waste mode never moves a bin. Docs:
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [DETECTION.md](DETECTION.md) (YOLO, labels, datasets)
+- [GREEN_SCORE.md](GREEN_SCORE.md)
+- [DATABASE.md](DATABASE.md)
+- [API.md](API.md)
+- [WINDOWS_SETUP.md](WINDOWS_SETUP.md)
+- [README_PI.md](README_PI.md) §17
+- [HACKATHON_DEMO.md](HACKATHON_DEMO.md)
+- [VIVA_QUESTIONS.md](VIVA_QUESTIONS.md)
+
+### Windows laptop (PowerShell, in `Zyqora-main`)
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1
+```
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start_all.ps1
+```
+This opens http://127.0.0.1:8000.
+
+### Raspberry Pi 5
+```bash
+git pull && pip install -r requirements-pi.txt && (cd frontend && npm ci && npm run build) && bash scripts/start_pi_demo.sh
+```
+
+## 3.0 single-item dashboard (still included)
 
 ## Architecture
 
@@ -58,7 +93,7 @@ Then open the printed `http://<pi-ip>:8000` in a browser on the same network. No
   ```bash
   python serve_zyqora.py --profile waste_mobilenetv2
   ```
-  then `npm run dev` in `frontend/`. Native ExecuTorch wheels are not published for Windows. On Windows, use WSL2 for the backend, or point the dev server at the Pi.
+  then `npm run dev` in `frontend/`. Windows: ExecuTorch 1.3.1 publishes Windows wheels; use `setup_windows.ps1` (unverified, see WINDOWS_SETUP.md), or point the dev server at the Pi.
 
 **Confirming the Pi runs the trained model (not the ImageNet one).** Check **Model Performance → Loaded model**, or:
 ```bash
@@ -120,6 +155,12 @@ Raspberry Pi deployment: [README_PI.md](README_PI.md). Configuration: [CONFIGURA
 | Task | Command |
 |---|---|
 | Dashboard + API (Pi, LAN) | `bash scripts/start_pi_demo.sh` or `python serve_zyqora.py --host 0.0.0.0 --port 8000` |
+| Dashboard + API (Windows) | `powershell -ExecutionPolicy Bypass -File .\start_all.ps1` |
+| Detector benchmark (+ full pipeline) | `python scripts/benchmark_detector.py --threads 2 4 --images <dir> --pipeline` |
+| Detector evaluation (held-out boxes) | `python scripts/evaluate_detector.py --voc <VOC2007 dir>` or `--images <dir> --labels <dir> --dataset-classes classes.txt` |
+| Detector export / parity | `python scripts/export_detector.py --weights yolo11n.pt --imgsz 640 320` · `python scripts/check_detector_parity.py --weights yolo11n.pt --images <dir>` |
+| TACO waste-detector data / training (needs approval + GPU) | `python scripts/prepare_taco.py --taco <TACO/data> --out data/taco_yolo` · `python scripts/train_detector.py --data data/taco_yolo/data.yaml --confirm` |
+| Database init / migrate | `python scripts/init_db.py` |
 | Verify + activate the waste model (Pi) | `python scripts/verify_waste_model.py --images <VAL sample with O/ R/> --expected-sha256 <hash> --activate` |
 | Station (simulation) | `python zyqora_station.py --camera folder:data/demo --voice ta --user DEMO01` |
 | Station (Pi camera) | `python zyqora_station.py --camera auto --voice en --user DEMO01` |
