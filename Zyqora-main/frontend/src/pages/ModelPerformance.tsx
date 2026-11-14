@@ -113,6 +113,17 @@ export default function ModelPerformance() {
                   <MetricCard label="Accuracy" value={fmtPct(v.accuracy, 2)} hint={`${fmtNum(v.dataset.validation_images)} images`} />
                   {Object.entries(v.per_class_accuracy).map(([c, x]) => <MetricCard key={c} label={`${c} accuracy`} value={fmtPct(x, 1)} />)}
                 </div>
+                {v.pi_reproduction && (
+                  <div className="rounded-md border border-border bg-surface-2 p-3 text-sm" data-testid="pi-reproduction">
+                    <p className="flex flex-wrap items-center gap-2 font-medium">Reproduced on Raspberry Pi 5 <ScopeTag>pi · same validation set</ScopeTag></p>
+                    <p className="mt-1 font-mono text-xs tabular">
+                      {v.pi_reproduction.correct.toLocaleString()}/{v.pi_reproduction.total.toLocaleString()} correct ({fmtPct(v.pi_reproduction.accuracy, 1)})
+                      {" · "}review {fmtPct(v.pi_reproduction.review_rate, 1)} · accepted-only {fmtPct(v.pi_reproduction.accepted_only_accuracy, 2)}
+                      {" · "}inference median {fmtMs(v.pi_reproduction.inference_median_ms, 2)} · {fmtNum(v.pi_reproduction.throughput_images_per_second, 1)} img/s
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{v.pi_reproduction.source} {v.pi_reproduction.note}</p>
+                  </div>
+                )}
                 <ConfusionMatrix rows={v.confusion_matrix.labels} cols={v.confusion_matrix.labels}
                   value={(r, c) => v.confusion_matrix.matrix[v.confusion_matrix.labels.indexOf(r)][v.confusion_matrix.labels.indexOf(c)]}
                   caption="Validation confusion matrix (2,000 images)" />

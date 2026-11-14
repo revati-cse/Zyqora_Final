@@ -1,7 +1,7 @@
 # CPU / memory benchmark report
 
 ## Status
-**No Raspberry Pi 5 figures exist in this repository yet.** Everything below was measured on the x86_64 development host (shared 4-vCPU Xeon VM) to validate the tooling. Host timings varied by up to about 2× between runs. Do not quote them as Pi performance.
+**Raspberry Pi 5 figures for the waste model were measured on 2026-11-14** (section "Pi results"). Everything in the development-host sections was measured on an x86_64 VM to validate the tooling, and must not be quoted as Pi performance.
 
 ## How to measure on the Pi (reproducible)
 ```bash
@@ -62,8 +62,27 @@ python serve_zyqora.py --profile waste_mobilenetv2
 ```
 and in a second terminal, the same loop (any HTTP client), plus `GET /api/device/metrics` for RSS.
 
-## Pi results
-| Profile | threads | median ms | p95 ms | CPU ms/inf | e2e median ms | peak MB | camera-to-result median ms |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| waste_mobilenetv2 | *pending* | | | | | | |
-| imagenet_mobilenetv2 | *pending* | | | | | | |
+## Pi results (measured on the Raspberry Pi 5)
+Device: **Raspberry Pi 5 Model B Rev 1.1**, Python 3.12 venv, ExecuTorch 1.3.1+cpu with XNNPACK. Model: `mobilenetv2_waste_fp32_xnnpack.pte` (8.88 MB, SHA-256 `b019fc68…094f`).
+
+**Thread sweep** (`scripts/benchmark_pi.py --profile waste_mobilenetv2 --threads 1 2 3 4 --images data/validation --max-images 50`, 10 warm-ups, 100 runs per setting, each in a fresh process):
+
+| Threads | Model median | Model p95 | Inferences/s | CPU ms / inference | CPU % (100 = 1 core) | End-to-end median | End-to-end p95 | Images/s | RSS MB |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 21.89 ms | 21.94 ms | 45.2 | **22.10** | 100 | 25.51 ms | 25.76 ms | 39.0 | 380 |
+| **2 (configured)** | **12.73 ms** | **12.80 ms** | 77.3 | 25.32 | 196 | 16.13 ms | 16.37 ms | 61.5 | 380 |
+| 3 | 9.95 ms | 10.01 ms | 98.6 | 29.18 | 288 | 13.39 ms | 13.61 ms | 74.1 | 380 |
+| 4 | 9.78 ms | 9.86 ms | 100.2 | 37.91 | 380 | 13.33 ms | 13.55 ms | 74.3 | 380 |
+
+Decision: **2 threads** (`config/app.yaml → model.num_threads: 2`). It nearly halves latency compared with 1 thread for about 15% more CPU per inference, and leaves two cores free for the web server, camera and dashboard. Going from 3 to 4 threads gains 0.17 ms for 30% more CPU, so 4 is not used. Latency is very stable (p95 within 0.1 ms of the median).
+
+**Full validation run on the Pi** (`run_zyqora.py --profile waste_mobilenetv2 --images data/validation --labels data/validation/labels.csv --quiet`, 2,000 images, 2 threads):
+
+| Metric | Value |
+|---|---:|
+| Model inference median / mean / p95 | 12.87 / 12.88 / 12.94 ms |
+| Throughput (decode + preprocess + inference + decision) | 58.6 images/s |
+| CPU per image (whole pipeline) | 28.8 ms |
+| Process memory (RSS / peak) | 384 / 384 MB |
+
+Still to measure on the Pi: dashboard HTTP latency and camera-to-result latency (`zyqora_station.py --camera auto --auto 30`). CPU temperature under load is optional.

@@ -3,12 +3,36 @@
 ## Status at a glance
 | Item | Status |
 |---|---|
-| Training and validation results | **Reported by the team** (MacBook Air M3, PyTorch MPS). This repository did not reproduce them; the training code and data are on the MacBook. |
-| `.pte` export, Pi load, output `[1, 2]`, SHA-256 match Mac ↔ Pi | **Reported by the team.** Re-checked automatically by `scripts/verify_waste_model.py` on the Pi. |
-| Integration in the Zyqora pipeline | **Implemented and tested** with a stand-in 2-class `.pte` of the same architecture (see below). Waiting for `verify_waste_model.py` with the real file. |
-| PyTorch ↔ ExecuTorch parity for the real model | **Pending** (needs the checkpoint and the `.pte` on one machine; command below) |
-| Leakage check train/val ↔ TEST | **Pending** (needs the datasets; command below) |
+| Training and validation results | **Reported by the team** (MacBook Air M3, PyTorch MPS) |
+| `.pte` on the Pi: loads with XNNPACK, output `[1, 2]`, SHA-256 `b019fc68…094f` pinned | **Verified on the Pi** (`verify_waste_model.py --activate`, 2026-11-14); committed in `33a5480` |
+| Integration in the Zyqora pipeline on the Pi | **Verified on the Pi.** The full validation set reproduces the team's result (next section). |
+| Thread count / latency / memory on the Pi | **Measured** (BENCHMARK_REPORT.md): 12.7 ms median with 2 threads, 380 MB RSS |
+| PyTorch ↔ ExecuTorch parity for the real checkpoint | **Pending** (needs the checkpoint and the `.pte` on one machine) |
+| Leakage check train/val ↔ TEST | **Pending** |
 | Independent TEST evaluation (1,401 Organic, 1,112 Recyclable) | **Pending.** Not run, so no numbers are claimed. |
+
+## Validation reproduced on the Raspberry Pi 5 (2026-11-14)
+`run_zyqora.py --profile waste_mobilenetv2 --images data/validation --labels data/validation/labels.csv --dataset-role dev`, on Raspberry Pi 5 Model B Rev 1.1, ExecuTorch 1.3.1+cpu, XNNPACK, 2 threads:
+
+| | MacBook (team-reported) | Raspberry Pi 5 through Zyqora |
+|---|---:|---:|
+| Accuracy | 96.65% (1,933 / 2,000) | **96.60% (1,932 / 2,000)** |
+| Organic precision / recall | 0.9726 / 0.9600 | 0.973 / 0.959 |
+| Recyclable precision / recall | 0.9605 / 0.9730 | 0.960 / 0.973 |
+| EcoGuard 0.95: review rate | 10.85% | **10.8%** (216) |
+| EcoGuard 0.95: accepted-only accuracy | 98.71% | **98.7%** (1,761 / 1,784; 23 wrong but accepted) |
+
+The near-identical result (one Organic image differs) shows that the Pi deployment matches training. That covers the exact 224×224 resize, ImageNet normalisation, class order (0 Organic, 1 Recyclable) and the exported weights; a wrong resize policy or swapped classes would change many predictions, not one. The remaining difference is most likely a boundary case: MPS vs XNNPACK numerics, or Zyqora's EXIF orientation handling.
+
+**Caveat:** this is the validation set that was used to pick the checkpoint and the threshold, so it is **not** an independent accuracy estimate. The TEST evaluation is still required.
+
+## Real-model behaviour on non-dataset photos (x86 host, 2026-11-14)
+The committed `.pte` was run through the dashboard API on 15 general photos (Open Images, not from the waste dataset):
+- 5 bottles: 4 Recyclable ACCEPT (0.97–0.998); 1 Organic at 0.66 → REVIEW
+- 5 houseplants: 4 Organic ACCEPT (~1.00); 1 Organic at 0.55 → REVIEW
+- 5 televisions (Residual): **3 ACCEPTED as Recyclable at 0.98–1.00**, 2 REVIEW
+
+A small sample, but real evidence for the Residual gap described below.
 
 ## Model card
 | | |
@@ -56,7 +80,7 @@ EcoGuard threshold table (team-reported, validation set; the counts are derived)
 ## The Residual / unknown-item gap
 The model has no Residual class and no "none of these" output. Softmax over two classes always sums to 1, so an item that is neither organic nor recyclable can still receive a very high score for one of them.
 
-In the stand-in integration test (below), all 5 television images (labelled `Residual`) were **accepted as Recyclable at about 100%**. That stand-in is not your model, but your model shares the same closed-set output, so you should expect the same failure mode. Zyqora therefore:
+With the real model, 3 of 5 television images (labelled `Residual`) were **accepted as Recyclable at 0.98–1.00** (section above). The untrained stand-in did the same with 5 of 5. Zyqora therefore:
 - never predicts Residual and never claims three-class accuracy
 - accepts `Residual` ground-truth labels in evaluation, counts them in the denominator as incorrect, and reports `unsupported_ground_truth_images` and `unsupported_ground_truth_accepted_into_a_bin` separately
 - holds every low-confidence item for a supervisor (no bin is opened)

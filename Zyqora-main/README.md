@@ -6,7 +6,8 @@ NAMMA AI hackathon, PS3 (AI for Sustainability: Edge-Based Waste Sorting). Targe
 > **Status in short** (details in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)):
 > - **Zyqora AI 3.0** adds a web dashboard (React) on a FastAPI backend that runs the real ExecuTorch pipeline. Open it from a laptop browser; the model runs on the Pi.
 > - The team's fine-tuned **Organic / Recyclable MobileNetV2** is integrated as the `waste_mobilenetv2` profile. The full stack (browser → API → ExecuTorch → EcoGuard → result) was tested end-to-end with a **stand-in model of the same architecture on an x86 host**, not with the real `.pte` and not on the Pi.
-> - Pi deployment, Pi benchmarks, TEST-set evaluation, parity with the real checkpoint, and all physical hardware tests are **pending**. No such numbers are claimed here.
+> - **On the Raspberry Pi 5 (2026-11-14):** the trained model is verified and active (SHA-256 pinned). It reproduces the validation result (**96.60%** vs 96.65% reported, same 2,000 validation images) and runs at **12.7 ms median inference with 2 threads** (BENCHMARK_REPORT.md).
+> - Still **pending**: the dashboard on the Pi, the independent TEST-set evaluation, parity with the real checkpoint, and physical camera, speaker and actuator tests. No such numbers are claimed here.
 > - The waste model **cannot recognise Residual waste** (see [MODEL_EVALUATION.md](MODEL_EVALUATION.md)).
 
 ## Architecture
@@ -96,8 +97,8 @@ The contribution is the integration: offline edge inference + confidence-aware r
 ## Models
 | Profile | Model | Contract | Status |
 |---|---|---|---|
-| `waste_mobilenetv2` | MobileNetV2 fine-tuned on Organic vs Recyclable, FP32 `.pte` (about 8.47 MiB) | exact 224×224 resize, ImageNet mean/std → `[1, 2]` | Integrated. Validation accuracy 96.65% (team-reported). TEST pending. |
-| `imagenet_mobilenetv2` | TorchVision MobileNetV2 IMAGENET1K_V1, FP32 `.pte` (13.99 MB) | resize 256 → crop 224 → `[1, 1000]` | Baseline / fallback (current `active` until the waste gate passes) |
+| `waste_mobilenetv2` | MobileNetV2 fine-tuned on Organic vs Recyclable, FP32 `.pte` (8.47 MiB, committed) | exact 224×224 resize, ImageNet mean/std → `[1, 2]` | **Active.** Validation 96.65% (team) / 96.60% reproduced on the Pi. TEST pending. |
+| `imagenet_mobilenetv2` | TorchVision MobileNetV2 IMAGENET1K_V1, FP32 `.pte` (13.99 MB) | resize 256 → crop 224 → `[1, 1000]` | Baseline / fallback |
 
 Model details and the evaluation plan: [MODEL_EVALUATION.md](MODEL_EVALUATION.md). INT8 experiments with the ImageNet model: [MODEL_COMPARISON.md](MODEL_COMPARISON.md).
 

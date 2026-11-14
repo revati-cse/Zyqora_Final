@@ -15,12 +15,20 @@
 
 The UI tests and API tests mock the network or the ExecuTorch binding. They prove the UI and HTTP logic, **not** that the trained model predicts correctly. The only real-model evidence is still the team's own Pi run (`.pte` loads, output `[1, 2]`).
 
+### Verified on the Raspberry Pi 5 (2026-11-14, run by the team, outputs reviewed)
+- Branch checked out on the Pi; **114/115 tests passed** (the 1 failure was a test that depended on the default `num_threads` value; fixed in `1ba195f`), including the real-ExecuTorch integration test on ARM.
+- `check_config.py`: VALID.
+- **Validation set reproduced on the Pi: 96.60% (1,932/2,000)** vs 96.65% reported; review rate 10.8%; accepted-only accuracy 98.7% (MODEL_EVALUATION.md).
+- `verify_waste_model.py --activate`: all checks PASS; `active: waste_mobilenetv2`, SHA-256 `b019fc68…094f` pinned.
+- Thread sweep: **2 threads → 12.73 ms median**, 25.3 ms CPU per inference, 380 MB RSS (BENCHMARK_REPORT.md).
+- Model + verification record + config committed **from the Pi** (`33a5480`, over SSH). The committed `.pte` is byte-identical to the verified one.
+
 ### Not done (needs the Pi, the Mac or the datasets)
-1. Deploy on the Pi (README_PI §0 and §16), run `verify_waste_model.py` (then `--activate`), and open the dashboard from a laptop.
-2. Commit the real `models/mobilenetv2_waste_fp32_xnnpack.pte` (+ `.json`) from the Pi.
+1. Dashboard on the Pi (README_PI §16: `npm run build`, `start_pi_demo.sh`), opened from a laptop; dashboard hardware checklist in HARDWARE.md.
+2. (done: the model is committed)
 3. Parity of the real checkpoint vs the `.pte` on the Mac, and confirmation that the training transform was `Resize((224,224))`.
 4. Leakage check and independent TEST evaluation. The Model Performance page shows "Not measured yet" until `outputs/test_waste/summary.json` exists.
-5. Pi benchmarks (`benchmark_pi.py`, API latency) and the dashboard hardware checklist in HARDWARE.md.
+5. Pi API latency and camera-to-result latency (the model benchmark is done).
 6. Tamil text review by a fluent speaker.
 
 ### Requirement gaps (honest list)

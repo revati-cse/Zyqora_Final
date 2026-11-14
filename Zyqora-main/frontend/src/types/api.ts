@@ -258,6 +258,20 @@ export interface ModelMetrics {
     derived_from_confusion_matrix: Record<string, { precision: number; recall: number; f1: number }>;
     ecoguard_threshold_table: Array<{ threshold: number; review_rate: number; accepted_accuracy: number }>;
     limitations: string[];
+    pi_reproduction?: {
+      scope: string;
+      source: string;
+      total: number;
+      correct: number;
+      accuracy: number;
+      review_rate: number;
+      accepted_only_accuracy: number;
+      accepted_incorrect: number;
+      inference_median_ms: number;
+      inference_p95_ms: number;
+      throughput_images_per_second: number;
+      note: string;
+    };
   };
   test: null | {
     scope: string;
